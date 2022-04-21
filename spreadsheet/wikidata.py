@@ -151,6 +151,8 @@ class Wikidata:
                         if not re.match(r"Q[0-9]+",colValue):
                             colValue=self.getItemByName(colValue, lookup, lang)
                 if colValue:
+                    colValue=colValue.strip()
+                if colValue:
                     if colType=="year":
                         yearString=f"+{colValue}-01-01T00:00:00Z"
                         ist.append(wbi_datatype.Time(yearString,prop_nr=propId,precision=9))
@@ -171,6 +173,7 @@ class Wikidata:
                 errors[column]=ex
         label=row["label"]
         description=row["description"]
+        qid=None
         if len(errors)==0 or ignoreErrors:
             qid=self.addItem(ist,label,description,write=write)
         return qid,errors
