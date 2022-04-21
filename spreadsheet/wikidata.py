@@ -164,11 +164,11 @@ class Wikidata:
                     elif colType=="extid":
                         ist.append(wbi_datatype.ExternalID(value=colValue,prop_nr=propId))
                     elif colType=="text":
-                        ist.append(wbi_datatype.MonolingualText(value=colValue,prop_nr=propId))
+                        ist.append(wbi_datatype.MonolingualText(text=colValue,prop_nr=propId))
                     else:
                         ist.append(wbi_datatype.ItemID(value=colValue,prop_nr=propId))
             except Exception as ex:
-                self.errors[column]=ex
+                errors[column]=ex
         label=row["label"]
         description=row["description"]
         if len(errors)==0 or ignoreErrors:
