@@ -150,7 +150,7 @@ class Wikidata:
                         # Q12345 ...
                         if not re.match(r"Q[0-9]+",colValue):
                             colValue=self.getItemByName(colValue, lookup, lang)
-                if colValue:
+                if colValue and isinstance(colValue,str):
                     colValue=colValue.strip()
                 if colValue:
                     if colType=="year":

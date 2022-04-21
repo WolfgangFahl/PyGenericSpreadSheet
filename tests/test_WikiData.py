@@ -51,6 +51,8 @@ class TestWikidata(BaseTest):
         #if write:
         #    wd.login()
         qid,errors=wd.addDict(row, mapDict,write=write)
+        if len(errors)>0:
+            print(errors)
         self.assertEqual(0,len(errors))
         # we didn't write so no item
         self.assertTrue(qid is None)
