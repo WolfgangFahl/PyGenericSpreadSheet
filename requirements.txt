@@ -1,6 +1,6 @@
 # required dependencies for https://github.com/WolfgangFahl/PyGenericSpreadSheet
 # https://pypi.org/project/pylodstorage/
-pylodstorage~=0.2.0
+pylodstorage~=0.2.2
 #https://pypi.org/project/odfpy/
 odfpy~=1.4.1
 XlsxWriter~=3.0.3
@@ -10,4 +10,6 @@ pandas~=1.4.2
 # https://github.com/burnash/gspread
 gspread~=5.3.2 
 # https://pypi.org/project/wikidataintegrator/
-wikidataintegrator~=0.9.22 
+#wikidataintegrator~=0.9.22 
+# https://github.com/LeMyst/WikibaseIntegrator
+wikibaseintegrator~=0.11.1
