@@ -400,6 +400,12 @@ class ExcelDocument(SpreadSheet):
         super().__init__(name=name, spreadSheetType=spreadSheetType)
         if engine is None:
             engine="xlsxwriter"
+        self.engine_kwargs={
+                                'options': {
+                                    'strings_to_numbers': True
+                                }
+                            }
+        
         self.engine=engine
         
     def toBytesIO(self) -> BytesIO:
@@ -410,13 +416,10 @@ class ExcelDocument(SpreadSheet):
             BytesIO Stream of the document
         """
         buffer = BytesIO()
+       
         with pd.ExcelWriter(buffer,
                             engine=self.engine,
-                            engine_kwargs={
-                                'options': {
-                                    'strings_to_numbers': True
-                                }
-                            },
+                            engine_kwargs=self.engine_kwargs,
                             ) as writer:
             for tableName, tableData in self.tables.items():
                 df = pd.DataFrame(tableData)
@@ -458,5 +461,6 @@ class OdsDocument(ExcelDocument):
         Args:
             name(str): name of the document
         """
-        super().__init__(name=name, spreadSheetType=SpreadSheetType.ODS, engine="odf")
 
+        super().__init__(name=name, spreadSheetType=SpreadSheetType.ODS, engine="odf")
+        self.engine_kwargs={}
