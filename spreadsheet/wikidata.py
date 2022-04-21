@@ -7,7 +7,8 @@ from pathlib import Path
 import json
 import os
 import re
-from wikidataintegrator import wdi_core, wdi_login
+#from wikidataintegrator import wdi_core, wdi_login
+from wikibaseintegrator import wbi_core, wbi_login, wbi_datatype
 from lodstorage.sparql import SPARQL
 import pprint
 import dateutil.parser
@@ -60,7 +61,7 @@ class Wikidata:
         '''
         user,pwd=self.getCredentials()
         if user is not None:
-            self.login = wdi_login.WDLogin(user=user, pwd=pwd, mediawiki_api_url=self.apiurl)
+            self.login = wbi_login.Login(user=user, pwd=pwd, mediawiki_api_url=self.apiurl)
             
     def addItem(self,ist:list,label:str,description:str,lang:str="en",write:bool=True):
         '''
@@ -71,7 +72,7 @@ class Wikidata:
             lang(str): the label language
             write(bool): if True do actually write
         '''
-        wbPage=wdi_core.WDItemEngine(data=ist,mediawiki_api_url=self.apiurl)
+        wbPage=wbi_core.ItemEngine(data=ist,mediawiki_api_url=self.apiurl)
         wbPage.set_label(label, lang=lang)
         wbPage.set_description(description, lang=lang)
         if self.debug:
@@ -152,20 +153,20 @@ class Wikidata:
                 if colValue:
                     if colType=="year":
                         yearString=f"+{colValue}-01-01T00:00:00Z"
-                        ist.append(wdi_core.WDTime(yearString,prop_nr=propId,precision=9))
+                        ist.append(wbi_datatype.Time(yearString,prop_nr=propId,precision=9))
                     elif colType=="date":
                             dateValue = dateutil.parser.parse(colValue)
                             isoDate=dateValue.isoformat()
                             dateString=f"+{isoDate}Z"
-                            ist.append(wdi_core.WDTime(dateString,prop_nr=propId,precision=11))
+                            ist.append(wbi_datatype.Time(dateString,prop_nr=propId,precision=11))
                     elif colType=="url":
-                        ist.append(wdi_core.WDUrl(value=colValue,prop_nr=propId))
+                        ist.append(wbi_datatype.Url(value=colValue,prop_nr=propId))
                     elif colType=="extid":
-                        ist.append(wdi_core.WDExternalID(value=colValue,prop_nr=propId))
+                        ist.append(wbi_datatype.ExternalID(value=colValue,prop_nr=propId))
                     elif colType=="text":
-                        ist.append(wdi_core.WDMonolingualText(value=colValue,prop_nr=propId))
+                        ist.append(wbi_datatype.MonolingualText(value=colValue,prop_nr=propId))
                     else:
-                        ist.append(wdi_core.WDItemID(value=colValue,prop_nr=propId))
+                        ist.append(wbi_datatype.ItemID(value=colValue,prop_nr=propId))
             except Exception as ex:
                 self.errors[column]=ex
         label=row["label"]
