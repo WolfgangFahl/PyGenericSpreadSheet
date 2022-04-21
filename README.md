@@ -11,6 +11,15 @@ Generic Spreadsheet Editing API
 ## Documentation
 [Wiki](http://wiki.bitplan.com/index.php/PyGenericSpreadSheet)
 
+## Dockerize
+``` bash
+docker build -t pygenericspreadsheet -f .\Dockerfile .
+```
+``` bash
+docker run --rm -it -v ${PWD}:"/mnt" -w "/mnt" pygenericspreadsheet /bin/bash
+```
+
 ### Authors
 * [Tim Holzheim](https://www.semantic-mediawiki.org/wiki/Tim_Holzheim)
 * [Wolfgang Fahl](http://www.bitplan.com/Wolfgang_Fahl)
+* [Michal Slupczynski](https://dbis.rwth-aachen.de/dbis/index.php/user/slupczynskim/)
