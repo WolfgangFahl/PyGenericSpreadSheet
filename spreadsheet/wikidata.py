@@ -76,7 +76,7 @@ class Wikidata:
         wbPage.set_label(label, lang=lang)
         wbPage.set_description(description, lang=lang)
         if self.debug:
-            pprint.pprint(wbPage.get_wd_json_representation())
+            pprint.pprint(wbPage.get_json_representation())
         if write:
             # return the identifier of the generated page
             return wbPage.write(self.login) # edit_summary=
