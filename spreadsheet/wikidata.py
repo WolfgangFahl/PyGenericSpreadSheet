@@ -7,8 +7,10 @@ from pathlib import Path
 import json
 import os
 import re
+import traceback
 #from wikidataintegrator import wdi_core, wdi_login
 from wikibaseintegrator import wbi_core, wbi_login, wbi_datatype
+from lodstorage.lod import LOD
 from lodstorage.sparql import SPARQL
 import pprint
 import dateutil.parser
@@ -130,13 +132,27 @@ class Wikidata:
             write(bool): if True do actually write
             ignoreErrors(bool): if True ignore errors
         '''
-        ist=[]
+        # dict of statements
+        istMap={}
+        # dict of errors
         errors={}
+        propsByName,_dup=LOD.getLookup(mapDict.values(), "PropertyName", withDuplicates=False)
         for propId in mapDict.keys():
             propMap=mapDict[propId]
             column=propMap["Column"]
             colType=propMap["Type"]
             lookup=propMap["Lookup"]
+            stToBeQualified=None
+            if "Qualifier" in propMap:
+                qualifierKey=propMap["Qualifier"]     
+                if qualifierKey:
+                    if not qualifierKey in propsByName: 
+                        raise Exception(f"invalid qualifierKey {qualifierKey}")
+                    else:
+                        propIdToBeQualified=propsByName[qualifierKey]["PropertyId"]
+                        if not propIdToBeQualified in istMap:
+                            raise Exception(f"qualifierKey {qualifierKey} needs a statement to qualify")
+                        stToBeQualified=istMap[propIdToBeQualified]         
             colValue=None
             try:
                 if column:
@@ -152,28 +168,40 @@ class Wikidata:
                             colValue=self.getItemByName(colValue, lookup, lang)
                 if colValue and isinstance(colValue,str):
                     colValue=colValue.strip()
+                st=None
                 if colValue:
                     if colType=="year":
                         yearString=f"+{colValue}-01-01T00:00:00Z"
-                        ist.append(wbi_datatype.Time(yearString,prop_nr=propId,precision=9))
+                        st=wbi_datatype.Time(yearString,prop_nr=propId,precision=9)
                     elif colType=="date":
-                            dateValue = dateutil.parser.parse(colValue)
-                            isoDate=dateValue.isoformat()
-                            dateString=f"+{isoDate}Z"
-                            ist.append(wbi_datatype.Time(dateString,prop_nr=propId,precision=11))
-                    elif colType=="url":
-                        ist.append(wbi_datatype.Url(value=colValue,prop_nr=propId))
+                        dateValue = dateutil.parser.parse(colValue)
+                        isoDate=dateValue.isoformat()
+                        dateString=f"+{isoDate}Z"
+                        st=wbi_datatype.Time(dateString,prop_nr=propId,precision=11)
                     elif colType=="extid":
-                        ist.append(wbi_datatype.ExternalID(value=colValue,prop_nr=propId))
+                        st=wbi_datatype.ExternalID(value=colValue,prop_nr=propId)
+                    elif colType=="string":
+                        st=wbi_datatype.String(value=str(colValue),prop_nr=propId)
                     elif colType=="text":
-                        ist.append(wbi_datatype.MonolingualText(text=colValue,prop_nr=propId))
+                        st=wbi_datatype.MonolingualText(text=str(colValue),prop_nr=propId)
+                    elif colType=="url":
+                        st=wbi_datatype.Url(value=colValue,prop_nr=propId)
                     else:
-                        ist.append(wbi_datatype.ItemID(value=colValue,prop_nr=propId))
+                        st=wbi_datatype.ItemID(value=colValue,prop_nr=propId)
+                    # qualifier for another statement?
+                    if stToBeQualified is not None:
+                        st.is_qualifier=True   
+                        stToBeQualified.qualifiers.append(st)
+                    else:    
+                        istMap[propId]=st
             except Exception as ex:
                 errors[column]=ex
+                if self.debug:
+                    print(traceback.format_exc())
         label=row["label"]
         description=row["description"]
         qid=None
+        ist=list(istMap.values())
         if len(errors)==0 or ignoreErrors:
             qid=self.addItem(ist,label,description,write=write)
         return qid,errors
