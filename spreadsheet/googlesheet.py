@@ -33,6 +33,12 @@ class GoogleSheet(object):
             self.dfs[sheetName]=pd.read_csv(StringIO(csvStr),keep_default_na=False)
         
     def asListOfDicts(self,sheetName):
+        '''
+        convert the given sheetName to a list of dicts
+        
+        Args:
+            sheetName(str): the sheet to convert
+        '''
         lod=self.dfs[sheetName].to_dict('records') 
         return lod
         
