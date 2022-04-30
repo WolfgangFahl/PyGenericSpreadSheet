@@ -3,11 +3,12 @@ Created on 2022-04-30
 
 @author: wf
 '''
-from lodstorage.trulytabular import WikidataProperty
-from lodstorage.lod import LOD
-from spreadsheet.wikidata import Wikidata
+#from lodstorage.trulytabular import WikidataProperty
+#from lodstorage.lod import LOD
+#from spreadsheet.wikidata import Wikidata
 from spreadsheet.googlesheet import GoogleSheet
 import pprint
+import collections
 
 class WikibaseQuery(object):
     '''
@@ -24,7 +25,9 @@ class WikibaseQuery(object):
         '''
         self.debug=debug
         self.entity=entity
-        self.properties={}
+        self.propertiesByName={}
+        self.propertiesById={}
+        self.propertiesByVarname={}
         
     def addPropertyFromDescriptionRow(self,row):
         '''
@@ -33,7 +36,31 @@ class WikibaseQuery(object):
         Args:
             row(dict): the row to add
         '''
-        self.properties[row['PropertyName']]=row
+        propName=row['PropertyName']
+        propId=row['PropertyId']
+        # properties might contain blank - replace for SPARQL variable names
+        propVarname=propName.replace(" ","_")
+        row['PropVarname']=propVarname
+        # set the two lookups
+        self.propertiesByName[propName]=row
+        self.propertiesById[propId]=row
+        self.propertiesByVarname[propVarname]=row
+        
+    def getColumnTypeAndVarname(self,propName):
+        '''
+        get a signature tuple consisting of columnName, propertType and SPARQL variable Name for the given property Name
+        
+        Args:
+            propName(str): the name of the property
+            
+        Returns:
+            column,propType,varName tupel
+        '''
+        column=self.propertiesByName[propName]["Column"]
+        propType=self.propertiesByName[propName]["Type"]
+        varName=self.propertiesByName[propName]["PropVarname"]
+        return column,propType,varName
+        
         
     def inFilter(self,values,propName:str="short_name",lang:str="en"):
         '''
@@ -51,38 +78,84 @@ class WikibaseQuery(object):
             delim=","
         filterClause+="\n  ))."
         return filterClause
+    
+    def getValuesClause(self,values,propName:str="short_name",lang:str=None,ignoreEmpty:bool=True):
+        '''
+        create a SPARQL Values clause
         
-    def asSparql(self,filterClause:str=None,orderClause:str=None,lang:str="en"):
+        Args:
+            values(list): the list of values to create values for
+            propName(str): the property name to assign the values for
+            ignoreEmpty(bool): ignore empty values if True
+        Returns:
+            str: the SPARQL values clause
+        '''
+        valuesClause=f"\n  VALUES(?{propName}) {{"
+        if lang is not None:
+            lang=f'@{lang}'
+        else:
+            lang=''
+        for value in values:
+            if value or not ignoreEmpty:
+                valuesClause+=f"\n  ( '{value}'{lang} )"
+        valuesClause+="\n  }."
+        return valuesClause
+        
+    def asSparql(self,filterClause:str=None,orderClause:str=None,pk:str=None,lang:str="en"):
         '''
         get the sparqlQuery for this query optionally applying a filterClause
         
         Args:
             filterClause(str): a filter to be applied (if any)
             orderClause(str): an orderClause to be applied (if any)
+            pk(str): primaryKey (if any)
             lang(str): the language to be used for labels
         '''
         sparql=f"""# 
 # get {self.entity} records 
 #  
-SELECT ?item ?itemLabel
+PREFIX pq: <http://www.wikidata.org/prop/qualifier/>
+PREFIX p: <http://www.wikidata.org/prop/>
+PREFIX schema: <http://schema.org/>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX wikibase: <http://wikiba.se/ontology#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?item ?itemLabel ?itemDescription
 """
-        for propName,row in self.properties.items():
-            propVar=propName.replace(" ","_")
+        for propVarname,row in self.propertiesByVarname.items():
             propValue=row["Value"]
+            propType=row["Type"]
+            # items will automatically fetch labels
+            propLabel=f" ?{propVarname}Label" if not propType else ""
             if not propValue:
-                sparql+=f"\n  ?{propVar}"
+                sparql+=f"\n  ?{propVarname}{propLabel}"
         sparql+="""\nWHERE {
   ?item rdfs:label ?itemLabel.
   FILTER(LANG(?itemLabel) = "%s")
-""" % lang
-        for propName,row in self.properties.items():
-            propVar=propName.replace(" ","_")
+  OPTIONAL { 
+    ?item schema:description ?itemDescription.
+    FILTER(LANG(?itemDescription) = "%s")
+  }
+""" % (lang,lang)
+        for propVarname,row in self.propertiesByVarname.items():
+            propName=row["PropertyName"]
             propValue=row["Value"]
             propId=row["PropertyId"]
+            propType=row["Type"]
             if propValue:
                 sparql+=f"\n  ?item wdt:{propId} wd:{propValue}."
             else:
-                sparql+=f"\n  OPTIONAL {{ ?item wdt:{propId} ?{propVar}. }}"
+                # primary keys are not optional
+                optional=pk is None or not propName==pk
+                if optional:
+                    sparql+=f"\n  OPTIONAL {{"
+                sparql+=f"\n    ?item wdt:{propId} ?{propVarname}."
+                if not propType:
+                    sparql+=f"\n    ?{propVarname} rdfs:label ?{propVarname}Label."
+                    sparql+=f"""\n    FILTER(LANG(?{propVarname}Label) = "{lang}")"""
+                if optional:
+                    sparql+=f"\n  }}"
         if filterClause is not None:
                 sparql+=f"\n{filterClause}"        
         sparql+="\n}"
