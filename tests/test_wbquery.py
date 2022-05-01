@@ -9,11 +9,16 @@ from spreadsheet.wbquery import WikibaseQuery
 from spreadsheet.googlesheet import GoogleSheet
 from lodstorage.lod import LOD
 from lodstorage.sparql import SPARQL
+import pprint
 
 class TestWikibaseQuery(BaseTest):
     '''
     test the Wikibase Query
     '''
+    
+    def setUp(self, debug=False, profile=True):
+        BaseTest.setUp(self, debug=debug, profile=profile)
+        self.endpointUrl="https://query.wikidata.org/sparql"
     
     def testSingleQuoteHandlingIssue4(self):
         '''
@@ -27,12 +32,29 @@ class TestWikibaseQuery(BaseTest):
         _query,sparqlQuery=WikibaseQuery.sparqlOfGoogleSheet(url,sheetName,entityName,pkColumn="Theme",debug=debug)
         if debug:
             print(sparqlQuery)
-            endpointUrl="https://query.wikidata.org/sparql"
-            
-            sparql=SPARQL(endpointUrl)
+            sparql=SPARQL(self.endpointUrl)
             wpdlist=sparql.queryAsListOfDicts(sparqlQuery)
             self.assertTrue(len(wpdlist)>90)
         self.assertTrue("God\\'s Wisdom" in sparqlQuery)
+        
+    def testSupportFormatterUrisForExternalIdentifiersIssue5(self):
+        '''
+        see https://github.com/WolfgangFahl/PyGenericSpreadSheet/issues/5
+        
+        support formatter URIs for external identifiers #5 
+        '''
+        url="https://docs.google.com/spreadsheets/d/1ciz_hvLpPlSm_Y30HapuERBOyRBh-NC4UFxKOBU49Tw"
+        sheetName="Continent"
+        entityName=sheetName
+        debug=self.debug
+        debug=True
+        _query,sparqlQuery=WikibaseQuery.sparqlOfGoogleSheet(url,sheetName,entityName,pkColumn="LoCId",debug=debug)
+        if debug:
+            print(sparqlQuery)
+            sparql=SPARQL(self.endpointUrl)
+            clist=sparql.queryAsListOfDicts(sparqlQuery)
+            pprint.pprint(clist)
+            self.assertTrue(len(clist)>=5)
      
     def testWikibaseQuery(self):
         '''

@@ -82,19 +82,19 @@ class WikibaseQuery(object):
         filterClause+="\n  ))."
         return filterClause
     
-    def getValuesClause(self,values,propName:str="short_name",lang:str=None,ignoreEmpty:bool=True):
+    def getValuesClause(self,values,propVarname:str="short_name",propType:str="text",lang:str=None,ignoreEmpty:bool=True):
         '''
         create a SPARQL Values clause
         
         Args:
             values(list): the list of values to create values for
-            propName(str): the property name to assign the values for
+            propVarname(str): the property variable name to assign the values for
             ignoreEmpty(bool): ignore empty values if True
         Returns:
             str: the SPARQL values clause
         '''
-        valuesClause=f"\n  VALUES(?{propName}) {{"
-        if lang is not None:
+        valuesClause=f"\n  VALUES(?{propVarname}) {{"
+        if lang is not None and propType=="text":
             lang=f'@{lang}'
         else:
             lang=''
@@ -133,8 +133,10 @@ SELECT ?item ?itemLabel ?itemDescription
             propType=row["Type"]
             # items will automatically fetch labels
             propLabel=f" ?{propVarname}Label" if not propType else ""
+            # extid' will automatically fetch formatted URIs
+            propUrl=f" ?{propVarname}Url" if propType=="extid" else ""
             if not propValue:
-                sparql+=f"\n  ?{propVarname}{propLabel}"
+                sparql+=f"\n  ?{propVarname}{propLabel}{propUrl}"
         sparql+="""\nWHERE {
   ?item rdfs:label ?itemLabel.
   FILTER(LANG(?itemLabel) = "%s")
@@ -159,6 +161,9 @@ SELECT ?item ?itemLabel ?itemDescription
                 if not propType:
                     sparql+=f"\n    ?{propVarname} rdfs:label ?{propVarname}Label."
                     sparql+=f"""\n    FILTER(LANG(?{propVarname}Label) = "{lang}")"""
+                elif propType=="extid":
+                    sparql+=f"\n    wd:{propId} wdt:P1630 ?{propVarname}FormatterUrl." 
+                    sparql+=f"\nBIND(IRI(REPLACE(?{propVarname}, '^(.+)$', ?{propVarname}FormatterUrl)) AS ?{propVarname}Url)."
                 if optional:
                     sparql+=f"\n  }}"
         if filterClause is not None:
@@ -191,10 +196,11 @@ SELECT ?item ?itemLabel ?itemDescription
         lod=gs.asListOfDicts(sheetName)
         lodByPk,_dup=LOD.getLookup(lod,pkColumn)
         query=queries[entityName]
-        valuesClause=query.getValuesClause(lodByPk.keys(),lang=lang)
         propRow=query.propertiesByColumn[pkColumn]
         pk=propRow["PropertyName"]
         pkVarname=propRow["PropVarname"]
+        pkType=propRow["Type"]
+        valuesClause=query.getValuesClause(lodByPk.keys(),propVarname=pkVarname,propType=pkType,lang=lang)
         
         sparql=query.asSparql(filterClause=valuesClause,orderClause=f"ORDER BY ?{pkVarname}",pk=pk)
         return query,sparql
