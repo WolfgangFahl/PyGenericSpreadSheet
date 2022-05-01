@@ -8,19 +8,39 @@ from tests.basetest import BaseTest
 from spreadsheet.wbquery import WikibaseQuery
 from spreadsheet.googlesheet import GoogleSheet
 from lodstorage.lod import LOD
+from lodstorage.sparql import SPARQL
 
 class TestWikibaseQuery(BaseTest):
     '''
     test the Wikibase Query
     '''
     
+    def testSingleQuoteHandlingIssue4(self):
+        '''
+        see https://github.com/WolfgangFahl/PyGenericSpreadSheet/issues/4
+        '''
+        debug=self.debug
+        debug=True
+        url="https://docs.google.com/spreadsheets/d/1AZ4tji1NDuPZ0gwsAxOADEQ9jz_67yRao2QcCaJQjmk"
+        sheetName="WorldPrayerDays"
+        entityName="WorldPrayerDay"
+        _query,sparqlQuery=WikibaseQuery.sparqlOfGoogleSheet(url,sheetName,entityName,pkColumn="Theme",debug=debug)
+        if debug:
+            print(sparqlQuery)
+            endpointUrl="https://query.wikidata.org/sparql"
+            
+            sparql=SPARQL(endpointUrl)
+            wpdlist=sparql.queryAsListOfDicts(sparqlQuery)
+            self.assertTrue(len(wpdlist)>90)
+        self.assertTrue("God\\'s Wisdom" in sparqlQuery)
+     
     def testWikibaseQuery(self):
         '''
         test wikibase Query handling
         '''
         url="https://docs.google.com/spreadsheets/d/16KURma_XUV68S6_VNWG-ESs-mPgbbAnnBNLwWlBnVFY"
         debug=self.debug
-        debug=True
+        #debug=True
         queries=WikibaseQuery.ofGoogleSheet(url,debug=debug)
         self.assertEqual(3,len(queries))
         if debug:

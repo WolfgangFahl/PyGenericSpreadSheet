@@ -8,7 +8,7 @@ Created on 2022-04-30
 #from spreadsheet.wikidata import Wikidata
 from spreadsheet.googlesheet import GoogleSheet
 import pprint
-import collections
+from lodstorage.lod import LOD
 
 class WikibaseQuery(object):
     '''
@@ -28,6 +28,7 @@ class WikibaseQuery(object):
         self.propertiesByName={}
         self.propertiesById={}
         self.propertiesByVarname={}
+        self.propertiesByColumn={}
         
     def addPropertyFromDescriptionRow(self,row):
         '''
@@ -38,11 +39,13 @@ class WikibaseQuery(object):
         '''
         propName=row['PropertyName']
         propId=row['PropertyId']
+        column=row['Column']
         # properties might contain blank - replace for SPARQL variable names
         propVarname=propName.replace(" ","_")
         row['PropVarname']=propVarname
-        # set the two lookups
+        # set the values of the lookups
         self.propertiesByName[propName]=row
+        self.propertiesByColumn[column]=row
         self.propertiesById[propId]=row
         self.propertiesByVarname[propVarname]=row
         
@@ -97,6 +100,8 @@ class WikibaseQuery(object):
             lang=''
         for value in values:
             if value or not ignoreEmpty:
+                # escape single quotes
+                value=value.replace("'","\\'")
                 valuesClause+=f"\n  ( '{value}'{lang} )"
         valuesClause+="\n  }."
         return valuesClause
@@ -163,7 +168,37 @@ SELECT ?item ?itemLabel ?itemDescription
             sparql+=f"\n{orderClause}"
         return sparql
             
-
+    @classmethod
+    def sparqlOfGoogleSheet(cls,url:str,sheetName:str,entityName:str,pkColumn:str,mappingSheetName="Wikidata",lang:str="en",debug:bool=False):
+        '''
+        get a sparql query for the given google sheet
+        
+        Args:
+            url(str): the url of the sheet
+            sheetName(str): the name of the sheet with the description
+            entityName(str): the name of the entity as defined in the Wikidata mapping
+            pkColumn(str): the column to use as a "primary key"
+            mappingSheetName(str): the name of the sheet with the Wikidata mappings
+            lang(str): the language to use (if any)
+            debug(bool): if True switch on debugging
+            
+        Returns:
+            WikibaseQuery
+        '''
+        queries=WikibaseQuery.ofGoogleSheet(url, mappingSheetName, debug)
+        gs=GoogleSheet(url)
+        gs.open([sheetName]) 
+        lod=gs.asListOfDicts(sheetName)
+        lodByPk,_dup=LOD.getLookup(lod,pkColumn)
+        query=queries[entityName]
+        valuesClause=query.getValuesClause(lodByPk.keys(),lang=lang)
+        propRow=query.propertiesByColumn[pkColumn]
+        pk=propRow["PropertyName"]
+        pkVarname=propRow["PropVarname"]
+        
+        sparql=query.asSparql(filterClause=valuesClause,orderClause=f"ORDER BY ?{pkVarname}",pk=pk)
+        return query,sparql
+    
     @classmethod
     def ofGoogleSheet(cls,url:str,sheetName:str="Wikidata",debug:bool=False)->dict:
         '''

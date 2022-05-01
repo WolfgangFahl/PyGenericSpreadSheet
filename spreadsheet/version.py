@@ -8,9 +8,9 @@ class Version(object):
     '''
     Version handling for pyGenericSpreadSheet
     '''
-    version='0.0.7'
+    version='0.0.8'
     date = '2022-04-21'
-    updated = '2022-04-30'
+    updated = '2022-05-01'
     name='pyGenericSpreadSheet'
     description='python API providing generic Access to Spreadsheet backends'
 
