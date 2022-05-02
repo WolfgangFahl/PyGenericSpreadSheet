@@ -163,7 +163,7 @@ SELECT ?item ?itemLabel ?itemDescription
                     sparql+=f"""\n    FILTER(LANG(?{propVarname}Label) = "{lang}")"""
                 elif propType=="extid":
                     sparql+=f"\n    wd:{propId} wdt:P1630 ?{propVarname}FormatterUrl." 
-                    sparql+=f"\nBIND(IRI(REPLACE(?{propVarname}, '^(.+)$', ?{propVarname}FormatterUrl)) AS ?{propVarname}Url)."
+                    sparql+=f"\n    BIND(IRI(REPLACE(?{propVarname}, '^(.+)$', ?{propVarname}FormatterUrl)) AS ?{propVarname}Url)."
                 if optional:
                     sparql+=f"\n  }}"
         if filterClause is not None:

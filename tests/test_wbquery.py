@@ -25,13 +25,14 @@ class TestWikibaseQuery(BaseTest):
         see https://github.com/WolfgangFahl/PyGenericSpreadSheet/issues/4
         '''
         debug=self.debug
-        debug=True
+        #debug=True
         url="https://docs.google.com/spreadsheets/d/1AZ4tji1NDuPZ0gwsAxOADEQ9jz_67yRao2QcCaJQjmk"
         sheetName="WorldPrayerDays"
         entityName="WorldPrayerDay"
         _query,sparqlQuery=WikibaseQuery.sparqlOfGoogleSheet(url,sheetName,entityName,pkColumn="Theme",debug=debug)
         if debug:
             print(sparqlQuery)
+        if self.endpointUrl:
             sparql=SPARQL(self.endpointUrl)
             wpdlist=sparql.queryAsListOfDicts(sparqlQuery)
             self.assertTrue(len(wpdlist)>90)
@@ -47,14 +48,17 @@ class TestWikibaseQuery(BaseTest):
         sheetName="Continent"
         entityName=sheetName
         debug=self.debug
-        debug=True
+        #debug=True
         _query,sparqlQuery=WikibaseQuery.sparqlOfGoogleSheet(url,sheetName,entityName,pkColumn="LoCId",debug=debug)
         if debug:
             print(sparqlQuery)
+        if self.endpointUrl:
             sparql=SPARQL(self.endpointUrl)
             clist=sparql.queryAsListOfDicts(sparqlQuery)
-            pprint.pprint(clist)
+            if debug:
+                pprint.pprint(clist)
             self.assertTrue(len(clist)>=5)
+        self.assertTrue("BIND(IRI(REPLACE(" in sparqlQuery)
      
     def testWikibaseQuery(self):
         '''
@@ -99,10 +103,10 @@ SELECT ?item ?itemLabel ?itemDescription
   ?location ?locationLabel
   ?start_time
   ?end_time
-  ?GND_ID
+  ?GND_ID ?GND_IDUrl
   ?describedAt
   ?official_website
-  ?WikiCFP_event_ID
+  ?WikiCFP_event_ID ?WikiCFP_event_IDUrl
 WHERE {
   ?item rdfs:label ?itemLabel.
   FILTER(LANG(?itemLabel) = "en")
@@ -142,6 +146,8 @@ WHERE {
   }
   OPTIONAL {
     ?item wdt:P227 ?GND_ID.
+    wd:P227 wdt:P1630 ?GND_IDFormatterUrl.
+    BIND(IRI(REPLACE(?GND_ID, '^(.+)$', ?GND_IDFormatterUrl)) AS ?GND_IDUrl).
   }
   OPTIONAL {
     ?item wdt:P973 ?describedAt.
@@ -151,6 +157,8 @@ WHERE {
   }
   OPTIONAL {
     ?item wdt:P5124 ?WikiCFP_event_ID.
+    wd:P5124 wdt:P1630 ?WikiCFP_event_IDFormatterUrl.
+    BIND(IRI(REPLACE(?WikiCFP_event_ID, '^(.+)$', ?WikiCFP_event_IDFormatterUrl)) AS ?WikiCFP_event_IDUrl).
   }
 
   VALUES(?short_name) {
@@ -182,7 +190,7 @@ WHERE {
   ( 'ACISP 2021'@en )
   }.
 }
-ORDER BY ?short_name"""
+ORDER BY ?short_name""" 
         self.assertEqual(expected,sparql)
        
         
