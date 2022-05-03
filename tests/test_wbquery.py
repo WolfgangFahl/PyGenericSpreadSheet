@@ -43,7 +43,7 @@ class TestWikibaseQuery(BaseTest):
         entityName=sheetName
         wbQuery,sparqlQuery=WikibaseQuery.sparqlOfGoogleSheet(url,sheetName,entityName,pkColumn=pkColumn,debug=debug)
         clist=self.getSparqlResult(sparqlQuery, debug)
-        return wbQuery,clist
+        return wbQuery,sparqlQuery,clist
             
     def getSparqlResult(self,sparqlQuery,debug:bool=False):
         rows=None
@@ -65,7 +65,7 @@ class TestWikibaseQuery(BaseTest):
         debug=self.debug
         pkColumn="LoCId"
         #debug=True
-        sparqlQuery,clist=self.getContinentQuery(pkColumn,debug=debug)
+        _wbQuery,sparqlQuery,clist=self.getContinentQuery(pkColumn,debug=debug)
         self.assertTrue(len(clist)>=5)
         self.assertTrue("BIND(IRI(REPLACE(" in sparqlQuery)
         
@@ -76,7 +76,7 @@ class TestWikibaseQuery(BaseTest):
         '''
         pkColumn="LoCId"
         debug=self.debug
-        debug=True
+        #debug=True
         wbQuery,clist=self.getContinentQuery(pkColumn,debug=debug)
         self.assertTrue(len(clist)>=5)
         continentsByItem,_dup=LOD.getLookup(clist,"item")
