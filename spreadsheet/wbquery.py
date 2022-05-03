@@ -82,7 +82,7 @@ class WikibaseQuery(object):
         filterClause+="\n  ))."
         return filterClause
     
-    def getValuesClause(self,values,propVarname:str="short_name",propType:str="text",lang:str=None,ignoreEmpty:bool=True):
+    def getValuesClause(self,values,propVarname:str="short_name",propType:str="text",lang:str=None,ignoreEmpty:bool=True,wbPrefix:str="http://www.wikidata.org/entity/"):
         '''
         create a SPARQL Values clause
         
@@ -90,6 +90,7 @@ class WikibaseQuery(object):
             values(list): the list of values to create values for
             propVarname(str): the property variable name to assign the values for
             ignoreEmpty(bool): ignore empty values if True
+            wbPrefix(str): a wikibase/wikidata prefix to be removed for items values
         Returns:
             str: the SPARQL values clause
         '''
@@ -100,9 +101,14 @@ class WikibaseQuery(object):
             lang=''
         for value in values:
             if value or not ignoreEmpty:
-                # escape single quotes
-                value=value.replace("'","\\'")
-                valuesClause+=f"\n  ( '{value}'{lang} )"
+                if not propType:
+                    if value and value.startswith(wbPrefix):
+                        value=value.replace(wbPrefix,"")
+                    valuesClause+=f"\n   ( wd:{value} )"
+                else:
+                    # escape single quotes
+                    value=value.replace("'","\\'")
+                    valuesClause+=f"\n  ( '{value}'{lang} )"
         valuesClause+="\n  }."
         return valuesClause
         
