@@ -77,7 +77,7 @@ class TestWikibaseQuery(BaseTest):
         pkColumn="LoCId"
         debug=self.debug
         #debug=True
-        wbQuery,clist=self.getContinentQuery(pkColumn,debug=debug)
+        wbQuery,_sparqlQuery,clist=self.getContinentQuery(pkColumn,debug=debug)
         self.assertTrue(len(clist)>=5)
         continentsByItem,_dup=LOD.getLookup(clist,"item")
         if debug:   
