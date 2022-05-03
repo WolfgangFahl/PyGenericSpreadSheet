@@ -33,6 +33,7 @@ class Wikidata:
         self.baseurl=baseurl
         self.debug=debug
         self.apiurl=f"{self.baseurl}/w/api.php"
+        self.login=None
         pass
     
     def getCredentials(self):
@@ -57,7 +58,7 @@ class Wikidata:
                 pass
         return user,pwd
             
-    def login(self):
+    def loginWithCredentials(self):
         '''
         login using the credentials taken via self.getCredentials
         '''
@@ -79,7 +80,7 @@ class Wikidata:
         wbPage.set_description(description, lang=lang)
         if self.debug:
             pprint.pprint(wbPage.get_json_representation())
-        if write:
+        if write and self.login:
             # return the identifier of the generated page
             return wbPage.write(self.login) # edit_summary=
         else:
