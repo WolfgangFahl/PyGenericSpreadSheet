@@ -34,6 +34,7 @@ class Wikidata:
         self.debug=debug
         self.apiurl=f"{self.baseurl}/w/api.php"
         self.login=None
+        self.user=None
         pass
     
     def getCredentials(self):
@@ -58,13 +59,26 @@ class Wikidata:
                 pass
         return user,pwd
             
-    def loginWithCredentials(self):
+    def loginWithCredentials(self,user:str=None,pwd:str=None):
         '''
-        login using the credentials taken via self.getCredentials
+        login using the given credentials or credentials 
+        retrieved via self.getCredentials
+        
+        Args:
+            user(str): the username
+            pwd(str): the password
         '''
-        user,pwd=self.getCredentials()
-        if user is not None:
-            self.login = wbi_login.Login(user=user, pwd=pwd, mediawiki_api_url=self.apiurl)
+        if user is None:
+            self.user,pwd=self.getCredentials()
+        if self.user is not None:
+            self.login = wbi_login.Login(user=self.user, pwd=pwd, mediawiki_api_url=self.apiurl)
+            
+    def logout(self):
+        '''
+        log the user out again
+        '''
+        self.user=None
+        self.login=None
             
     def addItem(self,ist:list,label:str,description:str,lang:str="en",write:bool=True):
         '''
