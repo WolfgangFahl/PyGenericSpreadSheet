@@ -69,9 +69,12 @@ class Wikidata:
             pwd(str): the password
         '''
         if user is None:
-            self.user,pwd=self.getCredentials()
-        if self.user is not None:
-            self.login = wbi_login.Login(user=self.user, pwd=pwd, mediawiki_api_url=self.apiurl)
+            user,pwd=self.getCredentials()       
+            
+        if user is not None:
+            self.login = wbi_login.Login(user=user, pwd=pwd, mediawiki_api_url=self.apiurl)
+            if self.login:
+                self.user=user
             
     def logout(self):
         '''
