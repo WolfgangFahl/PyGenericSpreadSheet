@@ -126,11 +126,11 @@ class Wikidata:
         ?item wdt:P1813 %s
         FILTER(LANG(?itemLabel)= "%s" )
       } UNION {
-        ?item wdt:P31 wd:Q3624078.
+        ?item wdt:P31 wd:%s.
         ?item rdfs:label ?itemLabel.
         FILTER(?itemLabel= %s )
       }
-    }""" % (itemType,itemLabel,lang,itemLabel)
+    }""" % (itemType,itemLabel,lang,itemType,itemLabel)
         endpointUrl="https://query.wikidata.org/sparql"
         sparql=SPARQL(endpointUrl)
         itemRows=sparql.queryAsListOfDicts(sparqlQuery)
