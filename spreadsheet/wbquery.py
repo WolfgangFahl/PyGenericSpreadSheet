@@ -42,6 +42,7 @@ class WikibaseQuery(object):
         column=row['Column']
         # properties might contain blank - replace for SPARQL variable names
         propVarname=propName.replace(" ","_")
+        propVarname=propName.replace("-","_")
         row['PropVarname']=propVarname
         # set the values of the lookups
         self.propertiesByName[propName]=row
