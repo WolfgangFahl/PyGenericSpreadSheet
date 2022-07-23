@@ -30,7 +30,7 @@ class TestWikidata(BaseTest):
         # http://learningwikibase.com/data-import/
         # https://github.com/SuLab/scheduled-bots/blob/main/scheduled_bots/wikipathways/bot.py
         debug=self.debug
-        debug=True
+        #debug=True
         wd=Wikidata("https://www.wikidata.org",debug=debug)
         url="https://docs.google.com/spreadsheets/d/1AZ4tji1NDuPZ0gwsAxOADEQ9jz_67yRao2QcCaJQjmk"
         self.gs=GoogleSheet(url)   
