@@ -3,9 +3,6 @@ Created on 2022-04-30
 
 @author: wf
 '''
-#from lodstorage.trulytabular import WikidataProperty
-#from lodstorage.lod import LOD
-#from spreadsheet.wikidata import Wikidata
 from spreadsheet.googlesheet import GoogleSheet
 import pprint
 from lodstorage.lod import LOD
@@ -269,6 +266,3 @@ SELECT ?item ?itemLabel ?itemDescription
         for row in entityMap.values():
             wbQuery.addPropertyFromDescriptionRow(row)
         return wbQuery
-        
-        
-    
