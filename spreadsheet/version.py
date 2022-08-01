@@ -8,7 +8,7 @@ class Version(object):
     '''
     Version handling for pyGenericSpreadSheet
     '''
-    version='0.1.8'
+    version='0.1.9'
     date = '2022-04-21'
     updated = '2022-08-01'
     name='pyGenericSpreadSheet'
