@@ -1,7 +1,7 @@
 # required dependencies for https://github.com/WolfgangFahl/PyGenericSpreadSheet
 # 2022-07-31
 # https://pypi.org/project/pylodstorage/
-pylodstorage~=0.3.8
+pylodstorage~=0.3.9
 #https://pypi.org/project/odfpy/
 odfpy~=1.4.1
 XlsxWriter~=3.0.3
