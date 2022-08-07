@@ -42,9 +42,3 @@ class GoogleSheet(object):
         lod=self.dfs[sheetName].to_dict('records') 
         return lod
         
-        
-        
-        
-        
-
-        
