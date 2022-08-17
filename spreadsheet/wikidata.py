@@ -217,6 +217,9 @@ class Wikidata:
                 if self.debug:
                     print(traceback.format_exc())
         label=row["label"]
+        # make sure label fits
+        if len(label)>250:
+            label=label[:247]+"..."
         description=row["description"]
         qid=None
         ist=list(istMap.values())
