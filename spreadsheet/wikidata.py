@@ -216,17 +216,18 @@ class Wikidata:
                 errors[column]=ex
                 if self.debug:
                     print(traceback.format_exc())
-        label=row["label"]
-        # make sure label fits
-        if len(label)>250:
-            label=label[:247]+"..."
-        description=row["description"]
+        label=""
+        description=""
+        if "label" in row:
+            label=row["label"]
+            # make sure label fits
+            if len(label)>250:
+                label=label[:247]+"..."
+        if "description" in row:
+            description=row["description"]
         qid=None
         ist=list(istMap.values())
         if len(errors)==0 or ignoreErrors:
             qid=self.addItem(ist,label,description,write=write)
         return qid,errors
-        
-        
-            
                 
