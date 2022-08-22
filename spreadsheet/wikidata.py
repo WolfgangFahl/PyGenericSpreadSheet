@@ -8,12 +8,16 @@ import json
 import os
 import re
 import traceback
+from typing import List, Union
+
 #from wikidataintegrator import wdi_core, wdi_login
 from wikibaseintegrator import wbi_core, wbi_login, wbi_datatype
 from lodstorage.lod import LOD
 from lodstorage.sparql import SPARQL
 import pprint
 import dateutil.parser
+from wikibaseintegrator.wbi_datatype import BaseDataType
+
 
 class Wikidata:
     '''
@@ -83,7 +87,7 @@ class Wikidata:
         self.user=None
         self.login=None
             
-    def addItem(self,ist:list,label:str,description:str,lang:str="en",write:bool=True):
+    def addItem(self,ist:list,label:str,description:str,lang:str="en",write:bool=True) -> Union[str, None]:
         '''
         Args:
             ist(list): item statements
@@ -92,14 +96,28 @@ class Wikidata:
             lang(str): the label language
             write(bool): if True do actually write
         '''
-        wbPage=wbi_core.ItemEngine(data=ist,mediawiki_api_url=self.apiurl)
-        wbPage.set_label(label, lang=lang)
-        wbPage.set_description(description, lang=lang)
+        return self.modifyItem(itemId="", ist=ist, label=label, description=description, lang=lang, write=write)
+
+    def modifyItem(self, itemId: str, ist: List[BaseDataType], label: str, description, lang:str=None, write:bool=True) -> Union[str, None]:
+        '''
+        Args:
+            itemId: qId of the item to modify
+            ist(list): item statements
+            label(str): the english label
+            description(str): the english description
+            lang(str): the label language
+            write(bool): if True do actually write
+        '''
+        wbPage = wbi_core.ItemEngine(item_id=itemId, data=ist, mediawiki_api_url=self.apiurl)
+        if label is not None:
+            wbPage.set_label(label, lang=lang)
+        if description is not None:
+            wbPage.set_description(description, lang=lang)
         if self.debug:
             pprint.pprint(wbPage.get_json_representation())
         if write and self.login:
             # return the identifier of the generated page
-            return wbPage.write(self.login) # edit_summary=
+            return wbPage.write(self.login)  # edit_summary=
         else:
             return None
             
@@ -114,23 +132,23 @@ class Wikidata:
         '''
         itemLabel=f'"{itemName}"@{lang}'
         sparqlQuery="""PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-    PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-    PREFIX wd: <http://www.wikidata.org/entity/>
-    
-    SELECT ?item ?itemLabel
-    WHERE {
-      {
-        ?item wdt:P31 wd:%s.
-        ?item rdfs:label ?itemLabel.
-        # short name
-        ?item wdt:P1813 %s
-        FILTER(LANG(?itemLabel)= "%s" )
-      } UNION {
-        ?item wdt:P31 wd:%s.
-        ?item rdfs:label ?itemLabel.
-        FILTER(?itemLabel= %s )
-      }
-    }""" % (itemType,itemLabel,lang,itemType,itemLabel)
+            PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+            PREFIX wd: <http://www.wikidata.org/entity/>
+            
+            SELECT ?item ?itemLabel
+            WHERE {
+              {
+                ?item wdt:P31 wd:%s.
+                ?item rdfs:label ?itemLabel.
+                # short name
+                ?item wdt:P1813 %s
+                FILTER(LANG(?itemLabel)= "%s" )
+              } UNION {
+                ?item wdt:P31 wd:%s.
+                ?item rdfs:label ?itemLabel.
+                FILTER(?itemLabel= %s )
+              }
+            }""" % (itemType,itemLabel,lang,itemType,itemLabel)
         endpointUrl="https://query.wikidata.org/sparql"
         sparql=SPARQL(endpointUrl)
         itemRows=sparql.queryAsListOfDicts(sparqlQuery)
@@ -139,13 +157,14 @@ class Wikidata:
             item=itemRows[0]["item"].replace("http://www.wikidata.org/entity/","")
         return item
             
-    def addDict(self,row:dict,mapDict:dict,lang:str="en",write:bool=False,ignoreErrors:bool=False):
+    def addDict(self, row:dict,mapDict:dict, itemId: Union[str, None] = None, lang:str="en",write:bool=False,ignoreErrors:bool=False):
         '''
         add the given row mapping with the given map Dict
         
         Args:
             row(dict): the data row to add
             mapDict(dict): the mapping dictionary to use
+            itemId: wikidata id of the item the data should be added to. If None a new item is created
             lang(str): the language for lookups
             write(bool): if True do actually write
             ignoreErrors(bool): if True ignore errors
@@ -216,18 +235,17 @@ class Wikidata:
                 errors[column]=ex
                 if self.debug:
                     print(traceback.format_exc())
-        label=""
-        description=""
-        if "label" in row:
-            label=row["label"]
-            # make sure label fits
-            if len(label)>250:
-                label=label[:247]+"..."
-        if "description" in row:
-            description=row["description"]
+        label = row.get("label", None)
+        description = row.get("description", None)
+        # make sure label fits
+        if label is not None and len(label)>250:
+            label=label[:247]+"..."
         qid=None
         ist=list(istMap.values())
         if len(errors)==0 or ignoreErrors:
-            qid=self.addItem(ist,label,description,write=write)
+            if itemId is None:
+                qid = self.addItem(ist,label,description,write=write)
+            else:
+                qid = self.modifyItem(itemId, ist=ist, label=label, description=description, write=write)
         return qid,errors
                 
