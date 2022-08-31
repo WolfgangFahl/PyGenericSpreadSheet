@@ -187,9 +187,10 @@ class Wikidata:
                         raise Exception(f"invalid qualifierKey {qualifierKey}")
                     else:
                         propIdToBeQualified=propsByName[qualifierKey]["PropertyId"]
-                        if not propIdToBeQualified in istMap:
-                            raise Exception(f"qualifierKey {qualifierKey} needs a statement to qualify")
-                        stToBeQualified=istMap[propIdToBeQualified]         
+                        if row.get(column) is not None:
+                            if not propIdToBeQualified in istMap:
+                                raise Exception(f"qualifierKey {qualifierKey} needs a statement to qualify")
+                            stToBeQualified=istMap[propIdToBeQualified]
             colValue=None
             try:
                 if column:
