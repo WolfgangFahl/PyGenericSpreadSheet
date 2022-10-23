@@ -3,20 +3,26 @@ Created on 2022-04-18
 
 @author: wf
 '''
+import datetime
+import typing
+from dataclasses import dataclass
+from enum import auto, Enum
 from pathlib import Path
 import json
 import os
 import re
 import traceback
 from typing import List, Union
-
-#from wikidataintegrator import wdi_core, wdi_login
-from wikibaseintegrator import wbi_core, wbi_login, wbi_datatype
-from lodstorage.lod import LOD
+from wikibaseintegrator.datatypes import BaseDataType, URL, ExternalID, Item, Time, String, MonolingualText
+from wikibaseintegrator.models import Claim, Reference, Snak
+from wikibaseintegrator.wbi_config import config as wbi_config
+from wikibaseintegrator import wbi_login, WikibaseIntegrator
 from lodstorage.sparql import SPARQL
 import pprint
 import dateutil.parser
-from wikibaseintegrator.wbi_datatype import BaseDataType
+from wikibaseintegrator.wbi_enums import WikibaseDatePrecision
+
+from spreadsheet.version import Version
 
 
 class Wikidata:
@@ -25,6 +31,8 @@ class Wikidata:
     
     see http://learningwikibase.com/data-import/
     '''
+    TEST_WD_URL = "https://test.wikidata.org"
+    WD_URL = "https://www.wikidata.org"
     
     def __init__(self,baseurl,debug:bool=False):
         '''
@@ -33,20 +41,39 @@ class Wikidata:
         Args:
             baseurl(str): the baseurl of the wikibase to use
             debug(bool): if True output debug information
-        ''' 
+        '''
+        if baseurl is None:
+            baseurl = self.WD_URL
         self.baseurl=baseurl
         self.debug=debug
         self.apiurl=f"{self.baseurl}/w/api.php"
         self.login=None
         self.user=None
-        pass
+        self._wbi = None
+
+    @property
+    def wbi(self) -> WikibaseIntegrator:
+        """
+        WikibaseIntegrator
+        """
+        if self._wbi is None:
+            wbi_config['USER_AGENT'] = f'{Version.name}/{Version.version} (https://www.wikidata.org/wiki/User:{self.user})'
+            wbi_config['MEDIAWIKI_API_URL'] = self.apiurl
+            self._wbi = WikibaseIntegrator(login=self.login)
+        return self._wbi
     
-    def getCredentials(self):
-        '''
-        get my credentials
-        
+    def getCredentials(self) -> (str, str):
+        """
+        get my credentials https://test.wikidata.org/wiki/Property:P370
+
         from the wd npm command line tool
-        '''
+
+        Throws:
+            Exception: if no credentials are available for the baseurl
+
+        Returns:
+            (username, password) of the account assigned to the baseurl
+        """
         user=None
         pwd=None
         home = str(Path.home())
@@ -55,12 +82,13 @@ class Wikidata:
             with open(configFilePath, mode="r") as f:
                 wikibaseConfigJson = json.load(f)
                 credentials=wikibaseConfigJson["credentials"]
-                if not self.baseurl in credentials:
+                credentialRecord = credentials.get(self.baseurl, None)
+                if self.baseurl == self.TEST_WD_URL and self.baseurl not in credentials and self.WD_URL in credentials:
+                    credentialRecord = credentials.get(self.WD_URL)
+                if credentialRecord is None:
                     raise Exception(f"no credentials available for {self.baseurl}")
-                credentialRow=credentials[self.baseurl]
-                user=credentialRow["username"]
-                pwd=credentialRow["password"]
-                pass
+                user=credentialRecord["username"]
+                pwd=credentialRecord["password"]
         return user,pwd
             
     def loginWithCredentials(self,user:str=None,pwd:str=None):
@@ -76,7 +104,7 @@ class Wikidata:
             user,pwd=self.getCredentials()       
             
         if user is not None:
-            self.login = wbi_login.Login(user=user, pwd=pwd, mediawiki_api_url=self.apiurl)
+            self.login = wbi_login.Login(user=user, password=pwd, mediawiki_api_url=self.apiurl)
             if self.login:
                 self.user=user
             
@@ -86,6 +114,7 @@ class Wikidata:
         '''
         self.user=None
         self.login=None
+        self._wbi = None
             
     def addItem(self,ist:list,label:str,description:str,lang:str="en",write:bool=True) -> Union[str, None]:
         '''
@@ -159,6 +188,7 @@ class Wikidata:
             
     def addDict(self, row:dict,mapDict:dict, itemId: Union[str, None] = None, lang:str="en",write:bool=False,ignoreErrors:bool=False):
         '''
+        ToDo: Refactor to use add_record
         add the given row mapping with the given map Dict
         
         Args:
@@ -169,84 +199,495 @@ class Wikidata:
             write(bool): if True do actually write
             ignoreErrors(bool): if True ignore errors
         '''
-        # dict of statements
-        istMap={}
-        # dict of errors
-        errors={}
-        propsByName,_dup=LOD.getLookup(mapDict.values(), "PropertyName", withDuplicates=False)
-        for propId in mapDict.keys():
-            propMap=mapDict[propId]
-            column=propMap["Column"]
-            colType=propMap["Type"]
-            lookup=propMap["Lookup"]
-            stToBeQualified=None
-            if "Qualifier" in propMap:
-                qualifierKey=propMap["Qualifier"]     
-                if qualifierKey:
-                    if not qualifierKey in propsByName: 
-                        raise Exception(f"invalid qualifierKey {qualifierKey}")
-                    else:
-                        propIdToBeQualified=propsByName[qualifierKey]["PropertyId"]
-                        if row.get(column) is not None:
-                            if not propIdToBeQualified in istMap:
-                                raise Exception(f"qualifierKey {qualifierKey} needs a statement to qualify")
-                            stToBeQualified=istMap[propIdToBeQualified]
-            colValue=None
+        mappings = []
+        for record in mapDict.values():
+            mapping = PropertyMapping.from_record(record)
+            mappings.append(mapping)
+        return self.add_record(row, mappings, item_id=itemId, lang=lang, write=write, ignore_errors=ignoreErrors)
+
+    def get_record(
+            self,
+            item_id:str,
+            property_mappings: Union[List[str], List['PropertyMapping']],
+            include_label: bool = True,
+            include_description: bool = True
+    ) -> dict:
+        """
+        Get the properties form the given item
+        Args:
+            item_id: id of the item to get the data from
+            property_mappings: list of property values to extract
+            include_label:
+            include_description:
+
+        Returns:
+            dict with the property values
+        """
+        item = self.wbi.item.get(item_id)
+        lang = "en"
+        record = dict()
+        if include_label and item.labels.get(lang) is not None:
+            record["label"] = item.labels.get(lang).value
+        if include_description and item.descriptions.get(lang) is not None:
+            record["description"] = item.descriptions.get(lang).value
+        qualifier_lookup = PropertyMapping.get_qualifier_lookup(property_mappings)
+        pms = []
+        for pm in property_mappings:
+            if not isinstance(pm, PropertyMapping) or not pm.is_qualifier():
+                pms.append(pm)
+        for prop in pms:
+            prop_id = prop
+            if isinstance(prop, PropertyMapping):
+                prop_id = prop.propertyId
+            claims = item.claims.get(prop_id)
+            prop_label = prop_id
+            if isinstance(prop, PropertyMapping):
+                prop_label = prop.column
+            values = []
+            for claim in claims:
+                value = self._get_claim_value(claim)
+                values.append(value)
+                if isinstance(prop, PropertyMapping) and prop.column in qualifier_lookup:
+                    for qualifier_pm in qualifier_lookup[prop.column]:
+                        qualifier_claims = claim.qualifiers.get(qualifier_pm.propertyId)  # ToDo: not fail-safe
+                        qualifier_values = []
+                        for qualifier_claim in qualifier_claims:
+                            qualifier_values.append(self._get_claim_value(qualifier_claim))
+                        record[qualifier_pm.column] = qualifier_values[0] if len(qualifier_values) == 1 else qualifier_values
+            if len(values) == 1:
+                record[prop_label] = values[0]
+            else:
+                record[prop_label] = values
+        return record
+
+    def _get_claim_value(self, claim: Union[Claim, Snak]) -> typing.Any:
+        """
+        Get the raw value of the claim without the metadata
+        Args:
+            claim: claim
+
+        Returns:
+            raw value of the claim
+        """
+        value = None
+        snak = claim
+        if isinstance(claim, Claim):
+            snak = claim.mainsnak
+        raw_value = snak.datavalue.get("value")
+        datatype = snak.datatype
+        if datatype == "wikibase-item":
+            value = raw_value.get("id", None)
+        elif datatype == "monolingualtext":
+            value = raw_value.get("text")
+        elif datatype == "string":
+            value = raw_value
+        elif datatype == "url":
+            value = raw_value
+        elif datatype == "time":
+            value = dateutil.parser.parse(raw_value.get("time")[1:])
+            precision = raw_value.get("precision")
+            if precision == 11:
+                value = value.date()
+            elif precision == 9:
+                value = value.year
+        elif datatype == "external-id":
+            value = raw_value
+        else:
+            pass
+        return value
+
+    def add_record(
+            self,
+            record: dict,
+            property_mappings: List['PropertyMapping'],
+            item_id: Union[str, None] = None,
+            lang: str = "en",
+            write: bool = False,
+            ignore_errors: bool = False,
+            summary: str = None,
+            reference: Reference = None
+    ) -> (str, dict):
+        """
+        add the given row mapping with the given map Dict
+
+        Args:
+            record(dict): the data row to add
+            property_mappings(list): the mapping dictionary to use
+            item_id: wikidata id of the item the data should be added to. If None a new item is created
+            lang(str): the language for lookups
+            write(bool): if True do actually write
+            ignore_errors(bool): if True ignore errors
+            summary: summary of the item edits
+            reference: reference to add to all claims
+
+        Returns:
+            (qId, errors)
+        """
+        claims = []
+        errors = dict()
+        qualifier_lookup = PropertyMapping.get_qualifier_lookup(property_mappings)
+        properties = [pm for pm in property_mappings if not pm.is_qualifier()]
+        for prop in properties:
+            value = self.get_prop_value(record, prop, lang)
+            claim = None
             try:
-                if column:
-                    if column in row:
-                        colValue=row[column]
-                else:
-                    colValue=propMap["Value"]
-                if colValue:
-                    if lookup:
-                        # ignore if the value is already a Wikibase Entity identifier of the form
-                        # Q12345 ...
-                        if not re.match(r"Q[0-9]+",colValue):
-                            colValue=self.getItemByName(colValue, lookup, lang)
-                if colValue and isinstance(colValue,str):
-                    colValue=colValue.strip()
-                st=None
-                if colValue:
-                    if colType=="year":
-                        yearString=f"+{colValue}-01-01T00:00:00Z"
-                        st=wbi_datatype.Time(yearString,prop_nr=propId,precision=9)
-                    elif colType=="date":
-                        dateValue = dateutil.parser.parse(colValue)
-                        isoDate=dateValue.isoformat()
-                        dateString=f"+{isoDate}Z"
-                        st=wbi_datatype.Time(dateString,prop_nr=propId,precision=11)
-                    elif colType=="extid":
-                        st=wbi_datatype.ExternalID(value=colValue,prop_nr=propId)
-                    elif colType=="string":
-                        st=wbi_datatype.String(value=str(colValue),prop_nr=propId)
-                    elif colType=="text":
-                        st=wbi_datatype.MonolingualText(text=str(colValue),prop_nr=propId)
-                    elif colType=="url":
-                        st=wbi_datatype.Url(value=colValue,prop_nr=propId)
-                    else:
-                        st=wbi_datatype.ItemID(value=colValue,prop_nr=propId)
-                    # qualifier for another statement?
-                    if stToBeQualified is not None:
-                        st.is_qualifier=True   
-                        stToBeQualified.qualifiers.append(st)
-                    else:    
-                        istMap[propId]=st
+                claim = self.convert_to_claim(value=value, pm=prop)
+                if reference is not None:
+                    claim.references.add(reference)
             except Exception as ex:
-                errors[column]=ex
+                errors[prop.column] = ex
                 if self.debug:
                     print(traceback.format_exc())
-        label = row.get("label", None)
-        description = row.get("description", None)
-        # make sure label fits
-        if label is not None and len(label)>250:
-            label=label[:247]+"..."
-        qid=None
-        ist=list(istMap.values())
-        if len(errors)==0 or ignoreErrors:
-            if itemId is None:
-                qid = self.addItem(ist,label,description,write=write)
+            if claim and prop.column in qualifier_lookup:
+                # property has qualifier
+                qualifier_property_mappings = qualifier_lookup.get(prop.column)
+                for qualifier_pm in qualifier_property_mappings:
+                    qualifier_value = self.get_prop_value(record, qualifier_pm, lang)
+                    if qualifier_value is None:
+                        continue
+                    else:
+                        try:
+                            qualifier = self.convert_to_claim(qualifier_value, qualifier_pm)
+                            claim.qualifiers.add(qualifier)
+                        except Exception as ex:
+                            errors[prop.column] = ex
+                            if self.debug:
+                                print(traceback.format_exc())
+            if claim:
+                claims.append(claim)
+        label = self.sanitize_label(record.get("label", None))
+        description = record.get("description", None)
+        item = self.get_or_create_item(item_id)
+        item.add_claims(claims)
+        if label:
+            item.labels.set(language=lang, value=label)
+        if description:
+            item.descriptions.set(language=lang, value=description)
+        if write:
+            if len(errors) == 0 or ignore_errors:
+                item = item.write(summary=summary)
+        return item.id, errors
+
+    def get_or_create_item(self, item_id:str):
+        """
+        Get or create the requested wikidata item
+        Args:
+            item_id: item to retrieve if None create a new item
+        """
+        if item_id is None:
+            item = self.wbi.item.new()
+        else:
+            item = self.wbi.item.get(item_id)
+        return item
+
+    def get_prop_value(self, record: dict, pm: 'PropertyMapping', lang: str) -> typing.Any:
+        """
+        Retrieve the property value from the record and prepare the value if necessary
+        Args:
+            record: record containing the property data
+            pm: property mapping
+            lang: language to use
+
+        Returns:
+            value of the property from the record
+        """
+        if pm.column:
+            value = record.get(pm.column, None)
+        else:
+            value = pm.value
+        if value and pm.valueLookupType and not self.is_wikidata_item_id(value):
+            # find the wikidata item id of value
+            value = self.getItemByName(value, pm.valueLookupType, lang)
+        if value and isinstance(value, str):
+            value = value.strip()
+        return value
+
+    def convert_to_claim(self, value, pm: 'PropertyMapping') -> BaseDataType:
+        """
+        Convert the given value to a corresponding wikidata claim
+        Args:
+            value: value of the claim
+            pm: information about the property statement ot generate
+
+        Raises:
+            Exception: if property datatype is unknown or not supported
+
+        Returns:
+            BaseDataType
+        """
+        if value is None:
+            return None
+        if pm.propertyType is None:
+            pm.propertyType = self.get_wddatatype_of_property(pm.propertyId)
+        if pm.propertyType is WdDatatype.year:
+            yearString = f"+{value}-01-01T00:00:00Z"
+            claim = Time(yearString, prop_nr=pm.propertyId, precision=WikibaseDatePrecision.YEAR)
+        elif pm.propertyType is WdDatatype.date:
+            claim = self.get_date_claim(value, pm.propertyId)
+        elif pm.propertyType is WdDatatype.extid:
+            claim = ExternalID(value=value, prop_nr=pm.propertyId)
+        elif pm.propertyType is WdDatatype.string:
+            claim = String(value=str(value), prop_nr=pm.propertyId)
+        elif pm.propertyType is WdDatatype.text:
+            claim = MonolingualText(text=str(value), prop_nr=pm.propertyId)
+        elif pm.propertyType is WdDatatype.url:
+            claim = URL(value=value, prop_nr=pm.propertyId)
+        elif pm.propertyType is WdDatatype.itemid:
+            claim = Item(value=value, prop_nr=pm.propertyId)
+        else:
+            raise Exception(f"({pm.propertyType}) unknown or not supported datatype")
+        return claim
+
+    @staticmethod
+    def get_date_claim(date: Union[str, datetime.date, datetime.datetime], prop_nr: Union[str, int]) -> Claim:
+        """
+        Get the data claim for the given date and property id
+        Args:
+            date: date value
+            prop_nr: id of the property
+
+        Returns:
+            Claim
+        """
+        if isinstance(date, datetime.date):
+            date_value = datetime.datetime.combine(date, datetime.time())
+        elif isinstance(date, datetime.datetime):
+            date_value = date
+        elif isinstance(date, str):
+            date_value = dateutil.parser.parse(date)
+        else:
+            raise Exception(f"Value '{date}' can not be parsed to date")
+        isoDate = date_value.isoformat()
+        date_string = f"+{isoDate}Z"
+        claim = Time(date_string, prop_nr=prop_nr, precision=WikibaseDatePrecision.DAY)
+        return claim
+
+    @staticmethod
+    def is_wikidata_item_id(value: str) -> bool:
+        """
+        Returns true if the given value is a wikidata item id
+        """
+        return bool(re.fullmatch(r"Q[0-9]+", value))
+
+    @staticmethod
+    def is_wikidata_property_id(value: str) -> bool:
+        """
+        Returns true if the given value is a wikidata property id
+        """
+        return bool(re.fullmatch(r"P[0-9]+", value))
+
+    @staticmethod
+    def sanitize_label(label: str, limit: int = None, postfix: str = None) -> str:
+        """
+        sanitize given label by ensuring it is not too long
+        Args:
+            label: label to sanitize
+            limit: max length of the label
+
+        Returns:
+            sanitized label
+        """
+        if limit is None:
+            limit = 250
+        if postfix is None:
+            postfix = "..."
+        if label is not None and len(label) > limit:
+            label = label[:limit-len(postfix)] + postfix
+        return label
+
+    def get_datatype_of_property(self, property_id: Union[str, int]) -> Union[str, None]:
+        """
+        Get the datatype of the given property
+        Args:
+            property_id: id of the property e.g. P31 or 31
+
+        Returns:
+            datatype of the property of None if no datatype is defined
+        """
+        if isinstance(property_id, int) or not property_id.startswith("P"):
+            property_id = f"P{property_id}"
+        query = """
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+            PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+            PREFIX wd: <http://www.wikidata.org/entity/>
+            PREFIX wikibase: <http://wikiba.se/ontology#>
+            
+            SELECT Distinct ?o
+            WHERE {
+              wd:%s wikibase:propertyType ?o.
+            }
+        """ % (property_id)
+        endpointUrl = "https://query.wikidata.org/sparql"
+        sparql = SPARQL(endpointUrl)
+        itemRows = sparql.queryAsListOfDicts(query)
+        wikibase_prefix = "http://wikiba.se/ontology#"
+        types = []
+        for record in itemRows:
+            types.append(record.get("o")[len(wikibase_prefix):])
+        if len(types) > 1:
+            print("Property has more than one type! please check")
+        elif len(types) == 0:
+            print("Property has no defined datatype! please check")
+            return None
+        return types[0]
+
+    def get_wddatatype_of_property(self, property_id: Union[str, int]) -> 'WdDatatype':
+        """
+        Get the datatype of the given property
+        Args:
+            property_id: id of the property e.g. P31 or 31
+
+        Returns:
+            WdDatatype of the property of None if no datatype is defined
+        """
+        property_type = self.get_datatype_of_property(property_id)
+        return WdDatatype.get_by_wikibase(property_type)
+
+
+class WdDatatype(Enum):
+    """
+    Supported wikidata datatypes
+    """
+    itemid = auto()
+    year = auto()
+    date = auto()
+    extid = auto()
+    text = auto()
+    url = auto()
+    string = auto()
+
+    @classmethod
+    def _missing_(cls, value):
+        """
+        default datatype
+        """
+        return cls.text
+
+    @classmethod
+    def get_by_wikibase(cls, property_type: str) -> Union['WdDatatype', None]:
+        """
+        Get WdDatatype by the corresponding wikibase datatype
+        Args:
+            property_type: wikibase name of the type
+
+        Returns:
+            WdDatatype
+        """
+        wikibase_map = {
+            "WikibaseItem": cls.itemid,
+            "Time": cls.date,
+            "Monolingualtext": cls.text,
+            "String": cls.string,
+            "ExternalId": cls.extid,
+            "Url": cls.url
+        }
+        return wikibase_map.get(property_type, None)
+
+
+@dataclass
+class PropertyMapping:
+    """
+    wikidata property mapping
+    """
+    column: str
+    propertyName: str
+    propertyId: str
+    propertyType: WdDatatype
+    qualifierOf: str = None
+    valueLookupType: typing.Any = None  # type (instance of/P31) of the property value → used to lookup the qid if property value if value is not already a qid
+    value: typing.Any = None  # set this value for the property
+
+    @classmethod
+    def from_record(cls, record: dict) -> 'PropertyMapping':
+        """
+        initialize PropertyMapping from the given record
+        Args:
+            record: property mapping information
+
+        Returns:
+            PropertyMapping
+        """
+        legacy_lookup = {
+            "Column": "column",
+            "PropertyName": "propertyName",
+            "PropertyId": "propertyId",
+            "Type": "propertyType",
+            "Qualifier": "qualifierOf",
+            "Lookup": "valueLookupType",
+            "Value": "value"
+        }
+        record = record.copy()
+        for i in range(len(record)):
+            key = list(record.keys())[i]
+            if key in legacy_lookup:
+                record[legacy_lookup[key]] = record[key]
+        # handle missing property type
+        if record.get("propertyType", None) in [None, ""]:
+            if record.get("valueLookupType", None) not in [None, ""]:
+                record["propertyType"] = WdDatatype.itemid
+            elif record.get("value", None) not in [None, ""]:
+                record["propertyType"] = WdDatatype.itemid
+        if record.get("propertyType", None) is not None and not isinstance(record.get("propertyType"), WdDatatype):
+            record["propertyType"] = WdDatatype[record.get("propertyType", None)]
+        mapping = PropertyMapping(
+                column=record.get("column", None),
+                propertyName=record.get("propertyName", None),
+                propertyId=record.get("propertyId", None),
+                propertyType=record.get("propertyType", None),
+                qualifierOf=record.get("qualifierOf", None),
+                valueLookupType=record.get("valueLookupType", None),
+                value=record.get("value", None)
+        )
+        return mapping
+
+    def is_qualifier(self) -> bool:
+        """
+        Returns true if the property mapping describes a qualifier
+        """
+        is_qualifier = not (self.qualifierOf is None or self.qualifierOf == "")
+        return is_qualifier
+
+    @classmethod
+    def get_qualifier_lookup(cls, properties: List['PropertyMapping']) -> typing.Dict[str, List['PropertyMapping']]:
+        """
+        Get a lookup for a property and all its qualifie
+        Args:
+            properties: property mappings to generate the lookup from
+         Returns:
+             dict as property qualifier lookup
+        """
+        res = dict()
+        for pm in properties:
+            if not isinstance(pm, PropertyMapping):
+                continue
+            if pm.qualifierOf is None or pm.qualifierOf == "":
+                continue
             else:
-                qid = self.modifyItem(itemId, ist=ist, label=label, description=description, write=write)
-        return qid,errors
-                
+                if pm.qualifierOf in res:
+                    res[pm.qualifierOf].append(pm)
+                else:
+                    res[pm.qualifierOf] = [pm]
+        return res
+
+
+class UrlReference(Reference):
+    """
+    Reference consisting of
+        reference URL (P854)
+        retrieved (P813)
+    """
+
+    def __init__(self, url, date: Union[str, datetime.date, datetime.datetime, None] = None):
+        """
+        constructor
+        Args:
+            url: reference URL
+            date: retrieved at
+        """
+        super().__init__()
+        self.url = url
+        if date is None:
+            date = datetime.date.today()
+        self.date = date
+        self.add(URL(value=self.url, prop_nr="P854"))
+        self.add(Wikidata.get_date_claim(date, prop_nr="P813"))
