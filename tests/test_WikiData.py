@@ -17,12 +17,21 @@ class TestWikidata(BaseTest):
     def setUp(self,debug=False,profile=True):
         super().setUp(debug, profile)
         self.wd = Wikidata("https://www.wikidata.org",debug=debug)
+        self._test_wd = None
+
+    @property
+    def test_wikidata(self) -> Wikidata:
+        if self._test_wd is None:
+            wd = Wikidata(baseurl="https://test.wikidata.org")
+            wd.loginWithCredentials()
+            self._test_wd = wd
+        return self._test_wd
     
     def testItemLookup(self):
         '''
         lookup items
         '''
-        debug=True
+        debug = self.debug
         wd=Wikidata("https://www.wikidata.org",debug=True)
         country=wd.getItemByName("USA","Q3624078")
         if debug:
@@ -237,6 +246,31 @@ class TestWikidata(BaseTest):
         qid, _ = wd.add_record(record, mappings, write=True)
         actual = wd.get_record(qid, mappings)
         self.assertDictEqual(expected_record, actual)
+
+    @unittest.skipIf(BaseTest.inPublicCI(), "Tests creating claim with two values")
+    def test_claim_with_two_values(self):
+        """
+        Tests adding a claim with two values by handing over a list
+        """
+        property_mappings = [
+            WikidataSandboxProperties.TEXT,
+            WikidataSandboxProperties.ITEM,
+            WikidataSandboxProperties.DATE,
+            WikidataSandboxProperties.URL,
+            WikidataSandboxProperties.EXT_ID
+        ]
+        record = {
+            "label": str(uuid.uuid4()),
+            "description": "test item added to test correctness of api",
+            "text": ["Hello", "World"],
+            "date": [datetime.now().date(), datetime.fromisoformat("2000-01-01").date()],
+            "url": ["http://example.org", "http://example.org/test"],
+            "item": ["Q377", "Q344"],
+            "identifier": [str(uuid.uuid4()), str(uuid.uuid4())]
+        }
+        qid, _ = self.test_wikidata.add_record(record, property_mappings=property_mappings, write=True)
+        actual_record = self.test_wikidata.get_record(qid, property_mappings=property_mappings)
+        self.assertDictEqual(record, actual_record)
 
     def test_get_datatype_of_property(self):
         """

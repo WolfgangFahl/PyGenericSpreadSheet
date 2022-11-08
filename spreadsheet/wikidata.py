@@ -56,11 +56,18 @@ class Wikidata:
         """
         WikibaseIntegrator
         """
-        if self._wbi is None:
+        if self._wbi is None or (self.login is not None and self._wbi.login is None):
             wbi_config['USER_AGENT'] = f'{Version.name}/{Version.version} (https://www.wikidata.org/wiki/User:{self.user})'
             wbi_config['MEDIAWIKI_API_URL'] = self.apiurl
             self._wbi = WikibaseIntegrator(login=self.login)
         return self._wbi
+
+    @wbi.setter
+    def wbi(self, wbi: typing.Union[WikibaseIntegrator, None]):
+        """
+        set the WikibaseIntegrator
+        """
+        self._wbi = wbi
     
     def getCredentials(self) -> (str, str):
         """
@@ -91,15 +98,15 @@ class Wikidata:
                 pwd=credentialRecord["password"]
         return user,pwd
             
-    def loginWithCredentials(self,user:str=None,pwd:str=None):
-        '''
-        login using the given credentials or credentials 
+    def loginWithCredentials(self, user: str = None, pwd: str = None):
+        """
+        login using the given credentials or credentials
         retrieved via self.getCredentials
-        
+
         Args:
             user(str): the username
             pwd(str): the password
-        '''
+        """
         if user is None:
             user,pwd=self.getCredentials()       
             
@@ -114,46 +121,12 @@ class Wikidata:
         '''
         self.user=None
         self.login=None
-        self._wbi = None
-            
-    def addItem(self,ist:list,label:str,description:str,lang:str="en",write:bool=True) -> Union[str, None]:
-        '''
-        Args:
-            ist(list): item statements
-            label(str): the english label
-            description(str): the english description
-            lang(str): the label language
-            write(bool): if True do actually write
-        '''
-        return self.modifyItem(itemId="", ist=ist, label=label, description=description, lang=lang, write=write)
+        self.wbi = None
 
-    def modifyItem(self, itemId: str, ist: List[BaseDataType], label: str, description, lang:str=None, write:bool=True) -> Union[str, None]:
-        '''
-        Args:
-            itemId: qId of the item to modify
-            ist(list): item statements
-            label(str): the english label
-            description(str): the english description
-            lang(str): the label language
-            write(bool): if True do actually write
-        '''
-        wbPage = wbi_core.ItemEngine(item_id=itemId, data=ist, mediawiki_api_url=self.apiurl)
-        if label is not None:
-            wbPage.set_label(label, lang=lang)
-        if description is not None:
-            wbPage.set_description(description, lang=lang)
-        if self.debug:
-            pprint.pprint(wbPage.get_json_representation())
-        if write and self.login:
-            # return the identifier of the generated page
-            return wbPage.write(self.login)  # edit_summary=
-        else:
-            return None
-            
     def getItemByName(self,itemName:str,itemType:str,lang:str="en"):
         '''
         get an item by Name
-        
+        ToDo: Needs to be reworked as always WDQS is used as endpoint even if a different one is defined
         Args:
             itemName(str): the item to look for
             itemType(str): the type of the item
@@ -186,11 +159,19 @@ class Wikidata:
             item=itemRows[0]["item"].replace("http://www.wikidata.org/entity/","")
         return item
             
-    def addDict(self, row:dict,mapDict:dict, itemId: Union[str, None] = None, lang:str="en",write:bool=False,ignoreErrors:bool=False):
-        '''
+    def addDict(
+            self,
+            row:dict,
+            mapDict:dict,
+            itemId: Union[str, None] = None,
+            lang:str="en",
+            write:bool=False,
+            ignoreErrors:bool=False
+    ) -> (str, dict):
+        """
         ToDo: Refactor to use add_record
         add the given row mapping with the given map Dict
-        
+
         Args:
             row(dict): the data row to add
             mapDict(dict): the mapping dictionary to use
@@ -198,7 +179,10 @@ class Wikidata:
             lang(str): the language for lookups
             write(bool): if True do actually write
             ignoreErrors(bool): if True ignore errors
-        '''
+
+        Returns:
+            (qid, errors)
+        """
         mappings = []
         for record in mapDict.values():
             mapping = PropertyMapping.from_record(record)
@@ -328,33 +312,10 @@ class Wikidata:
         qualifier_lookup = PropertyMapping.get_qualifier_lookup(property_mappings)
         properties = [pm for pm in property_mappings if not pm.is_qualifier()]
         for prop in properties:
-            value = self.get_prop_value(record, prop, lang)
-            claim = None
-            try:
-                claim = self.convert_to_claim(value=value, pm=prop)
-                if reference is not None:
-                    claim.references.add(reference)
-            except Exception as ex:
-                errors[prop.column] = ex
-                if self.debug:
-                    print(traceback.format_exc())
-            if claim and prop.column in qualifier_lookup:
-                # property has qualifier
-                qualifier_property_mappings = qualifier_lookup.get(prop.column)
-                for qualifier_pm in qualifier_property_mappings:
-                    qualifier_value = self.get_prop_value(record, qualifier_pm, lang)
-                    if qualifier_value is None:
-                        continue
-                    else:
-                        try:
-                            qualifier = self.convert_to_claim(qualifier_value, qualifier_pm)
-                            claim.qualifiers.add(qualifier)
-                        except Exception as ex:
-                            errors[prop.column] = ex
-                            if self.debug:
-                                print(traceback.format_exc())
-            if claim:
-                claims.append(claim)
+            qualifier_mappings = qualifier_lookup.get(prop.column, None)
+            prop_claims, claim_errors = self._get_claims_for_property(record, prop, qualifier_mappings, reference, lang)
+            errors = {**errors, **claim_errors}
+            claims.extend(prop_claims)
         label = self.sanitize_label(record.get("label", None))
         description = record.get("description", None)
         item = self.get_or_create_item(item_id)
@@ -367,6 +328,85 @@ class Wikidata:
             if len(errors) == 0 or ignore_errors:
                 item = item.write(summary=summary)
         return item.id, errors
+
+    def _get_claims_for_property(
+            self,
+            record: dict,
+            prop_mapping: 'PropertyMapping',
+            qualifier_mappings: Union[List['PropertyMapping'], None],
+            reference: Reference,
+            lang: str
+    ) -> (List[Claim], dict):
+        """
+        Get the claims that can be derived from the given property mapping and record.
+        Generates a claim with its qualifiers and reference from the given record and mapping.
+        If the record value of the property is a list multiple claims are generated
+
+        Args:
+            record: data record
+            prop_mapping: property definition for the claims that should be generated from the given record
+            qualifier_mappings: descriptions of the qualifiers of the property
+            reference: reference of the statement
+            lang: language to use
+
+        Returns:
+            list of statements
+        """
+        claims = []
+        value = self.get_prop_value(record, prop_mapping, lang)
+        values = value if isinstance(value, list) else [value]
+        errors = dict()
+        for value in values:
+            claim = None
+            try:
+                claim = self.convert_to_claim(value=value, pm=prop_mapping)
+            except Exception as ex:
+                errors[prop_mapping.column] = ex
+                if self.debug:
+                    print(traceback.format_exc())
+            if claim is not None:
+                # add reference
+                if reference is not None:
+                    claim.references.add(reference)
+                # add qualifier
+                if qualifier_mappings is not None:
+                    qualifier_errors = self._add_qualifier_to_claim(record, claim, qualifier_mappings, lang)
+                    errors = {**errors, **qualifier_errors}
+            if claim is not None:
+                claims.append(claim)
+        return claims, errors
+
+    def _add_qualifier_to_claim(
+            self,
+            record: dict,
+            claim: Claim,
+            qualifier_mappings: List['PropertyMapping'],
+            lang: str
+    ) -> dict:
+        """
+        add the qualifiers to the given claim
+        Args:
+            record:
+            claim: add qualifiers to this claim
+            qualifier_mappings: list of PropertyMappings of the qualifiers
+
+        Returns:
+            dict of occurred errors with the qualifier column as key. If no error occurs an empty dict is returned
+        """
+        errors = dict()
+        for qualifier_pm in qualifier_mappings:
+            qualifier_value = self.get_prop_value(record, qualifier_pm, lang)
+            if qualifier_value is None:
+                continue
+            else:
+                try:
+                    qualifier = self.convert_to_claim(qualifier_value, qualifier_pm)
+                    claim.qualifiers.add(qualifier)
+                except Exception as ex:
+                    errors[qualifier_pm.column] = ex
+                    if self.debug:
+                        print(traceback.format_exc())
+        return errors
 
     def get_or_create_item(self, item_id:str):
         """
@@ -391,9 +431,8 @@ class Wikidata:
         Returns:
             value of the property from the record
         """
-        if pm.column:
-            value = record.get(pm.column, None)
-        else:
+        value = record.get(pm.column, None)
+        if value is None:
             value = pm.value
         if value and pm.valueLookupType and not self.is_wikidata_item_id(value):
             # find the wikidata item id of value
@@ -589,7 +628,7 @@ class PropertyMapping:
     """
     wikidata property mapping
     """
-    column: str
+    column: Union[str, None]  # if None, the value is used
     propertyName: str
     propertyId: str
     propertyType: WdDatatype
