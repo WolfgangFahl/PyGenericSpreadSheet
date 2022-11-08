@@ -10,6 +10,6 @@ class Version(object):
     '''
     version='0.1.22'
     date = '2022-04-21'
-    updated = '2022-11-04'
+    updated = '2022-11-08'
     name='pyGenericSpreadSheet'
     description='python API providing generic Access to specific Spreadsheet backends'
