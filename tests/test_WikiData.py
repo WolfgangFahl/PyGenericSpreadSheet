@@ -99,11 +99,11 @@ class TestWikidata(BaseTest):
             (1, "1", String, volume),
         ]
         for params in test_params:
-            with self.subTest("test claim generation", params=params):
+            with self.subTest("test statement generation", params=params):
                 value, expected_value, expected_type, pm = params
-                claim = self.wd.convert_to_claim(value, pm)
-                self.assertTrue(isinstance(claim, expected_type))
-                self.assertEqual(expected_value, claim.mainsnak.datavalue["value"])
+                statement = self.wd.convert_to_claim(value, pm)
+                self.assertTrue(isinstance(statement, expected_type))
+                self.assertEqual(expected_value, statement.mainsnak.datavalue["value"])
 
     def test_is_wikidata_item_id(self):
         """
@@ -247,10 +247,10 @@ class TestWikidata(BaseTest):
         actual = wd.get_record(qid, mappings)
         self.assertDictEqual(expected_record, actual)
 
-    @unittest.skipIf(BaseTest.inPublicCI(), "Tests creating claim with two values")
+    @unittest.skipIf(BaseTest.inPublicCI(), "Tests creating statement with two values")
     def test_claim_with_two_values(self):
         """
-        Tests adding a claim with two values by handing over a list
+        Tests adding a statement with two values by handing over a list
         """
         property_mappings = [
             WikidataSandboxProperties.TEXT,

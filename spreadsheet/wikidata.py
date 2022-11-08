@@ -223,20 +223,20 @@ class Wikidata:
             prop_id = prop
             if isinstance(prop, PropertyMapping):
                 prop_id = prop.propertyId
-            claims = item.claims.get(prop_id)
+            statements = item.claims.get(prop_id)
             prop_label = prop_id
             if isinstance(prop, PropertyMapping):
                 prop_label = prop.column
             values = []
-            for claim in claims:
-                value = self._get_claim_value(claim)
+            for statement in statements:
+                value = self._get_statement_value(statement)
                 values.append(value)
                 if isinstance(prop, PropertyMapping) and prop.column in qualifier_lookup:
                     for qualifier_pm in qualifier_lookup[prop.column]:
-                        qualifier_claims = claim.qualifiers.get(qualifier_pm.propertyId)  # ToDo: not fail-safe
+                        qualifier_statements = statement.qualifiers.get(qualifier_pm.propertyId)  # ToDo: not fail-safe
                         qualifier_values = []
-                        for qualifier_claim in qualifier_claims:
-                            qualifier_values.append(self._get_claim_value(qualifier_claim))
+                        for qualifier_statement in qualifier_statements:
+                            qualifier_values.append(self._get_statement_value(qualifier_statement))
                         record[qualifier_pm.column] = qualifier_values[0] if len(qualifier_values) == 1 else qualifier_values
             if len(values) == 1:
                 record[prop_label] = values[0]
@@ -244,19 +244,19 @@ class Wikidata:
                 record[prop_label] = values
         return record
 
-    def _get_claim_value(self, claim: Union[Claim, Snak]) -> typing.Any:
+    def _get_statement_value(self, statement: Union[Claim, Snak]) -> typing.Any:
         """
-        Get the raw value of the claim without the metadata
+        Get the raw value of the statement without the metadata
         Args:
-            claim: claim
+            statement: statement to extract the value from
 
         Returns:
-            raw value of the claim
+            raw value of the statement
         """
         value = None
-        snak = claim
-        if isinstance(claim, Claim):
-            snak = claim.mainsnak
+        snak = statement
+        if isinstance(statement, Claim):
+            snak = statement.mainsnak
         raw_value = snak.datavalue.get("value")
         datatype = snak.datatype
         if datatype == "wikibase-item":
@@ -313,7 +313,7 @@ class Wikidata:
         properties = [pm for pm in property_mappings if not pm.is_qualifier()]
         for prop in properties:
             qualifier_mappings = qualifier_lookup.get(prop.column, None)
-            prop_claims, claim_errors = self._get_claims_for_property(record, prop, qualifier_mappings, reference, lang)
+            prop_claims, claim_errors = self._get_statement_for_property(record, prop, qualifier_mappings, reference, lang)
             errors = {**errors, **claim_errors}
             claims.extend(prop_claims)
         label = self.sanitize_label(record.get("label", None))
@@ -329,7 +329,7 @@ class Wikidata:
                 item = item.write(summary=summary)
         return item.id, errors
 
-    def _get_claims_for_property(
+    def _get_statement_for_property(
             self,
             record: dict,
             prop_mapping: 'PropertyMapping',
@@ -339,7 +339,7 @@ class Wikidata:
     ) -> (List[Claim], dict):
         """
         Get the claims that can be derived from the given property mapping and record.
-        Generates a claim with its qualifiers and reference from the given record and mapping.
+        Generates a statement with its qualifiers and reference from the given record and mapping.
         If the record value of the property is a list multiple claims are generated
 
         Args:
@@ -357,37 +357,37 @@ class Wikidata:
         values = value if isinstance(value, list) else [value]
         errors = dict()
         for value in values:
-            claim = None
+            statement = None
             try:
-                claim = self.convert_to_claim(value=value, pm=prop_mapping)
+                statement = self.convert_to_claim(value=value, pm=prop_mapping)
             except Exception as ex:
                 errors[prop_mapping.column] = ex
                 if self.debug:
                     print(traceback.format_exc())
-            if claim is not None:
+            if statement is not None:
                 # add reference
                 if reference is not None:
-                    claim.references.add(reference)
+                    statement.references.add(reference)
                 # add qualifier
                 if qualifier_mappings is not None:
-                    qualifier_errors = self._add_qualifier_to_claim(record, claim, qualifier_mappings, lang)
+                    qualifier_errors = self._add_qualifier_to_statement(record, statement, qualifier_mappings, lang)
                     errors = {**errors, **qualifier_errors}
-            if claim is not None:
-                claims.append(claim)
+            if statement is not None:
+                claims.append(statement)
         return claims, errors
 
-    def _add_qualifier_to_claim(
+    def _add_qualifier_to_statement(
             self,
             record: dict,
-            claim: Claim,
+            statement: Claim,
             qualifier_mappings: List['PropertyMapping'],
             lang: str
     ) -> dict:
         """
-        add the qualifiers to the given claim
+        add the qualifiers to the given statement
         Args:
             record:
-            claim: add qualifiers to this claim
+            statement: add qualifiers to this statement
             qualifier_mappings: list of PropertyMappings of the qualifiers
 
         Returns:
@@ -401,7 +401,7 @@ class Wikidata:
             else:
                 try:
                     qualifier = self.convert_to_claim(qualifier_value, qualifier_pm)
-                    claim.qualifiers.add(qualifier)
+                    statement.qualifiers.add(qualifier)
                 except Exception as ex:
                     errors[qualifier_pm.column] = ex
                     if self.debug:
@@ -441,11 +441,11 @@ class Wikidata:
             value = value.strip()
         return value
 
-    def convert_to_claim(self, value, pm: 'PropertyMapping') -> BaseDataType:
+    def convert_to_claim(self, value, pm: 'PropertyMapping') -> Union[BaseDataType, None]:
         """
-        Convert the given value to a corresponding wikidata claim
+        Convert the given value to a corresponding wikidata statement
         Args:
-            value: value of the claim
+            value: value of the statement
             pm: information about the property statement ot generate
 
         Raises:
@@ -460,33 +460,33 @@ class Wikidata:
             pm.propertyType = self.get_wddatatype_of_property(pm.propertyId)
         if pm.propertyType is WdDatatype.year:
             yearString = f"+{value}-01-01T00:00:00Z"
-            claim = Time(yearString, prop_nr=pm.propertyId, precision=WikibaseDatePrecision.YEAR)
+            statement = Time(yearString, prop_nr=pm.propertyId, precision=WikibaseDatePrecision.YEAR)
         elif pm.propertyType is WdDatatype.date:
-            claim = self.get_date_claim(value, pm.propertyId)
+            statement = self.get_date_claim(value, pm.propertyId)
         elif pm.propertyType is WdDatatype.extid:
-            claim = ExternalID(value=value, prop_nr=pm.propertyId)
+            statement = ExternalID(value=value, prop_nr=pm.propertyId)
         elif pm.propertyType is WdDatatype.string:
-            claim = String(value=str(value), prop_nr=pm.propertyId)
+            statement = String(value=str(value), prop_nr=pm.propertyId)
         elif pm.propertyType is WdDatatype.text:
-            claim = MonolingualText(text=str(value), prop_nr=pm.propertyId)
+            statement = MonolingualText(text=str(value), prop_nr=pm.propertyId)
         elif pm.propertyType is WdDatatype.url:
-            claim = URL(value=value, prop_nr=pm.propertyId)
+            statement = URL(value=value, prop_nr=pm.propertyId)
         elif pm.propertyType is WdDatatype.itemid:
-            claim = Item(value=value, prop_nr=pm.propertyId)
+            statement = Item(value=value, prop_nr=pm.propertyId)
         else:
             raise Exception(f"({pm.propertyType}) unknown or not supported datatype")
-        return claim
+        return statement
 
     @staticmethod
     def get_date_claim(date: Union[str, datetime.date, datetime.datetime], prop_nr: Union[str, int]) -> Claim:
         """
-        Get the data claim for the given date and property id
+        Get the data statement for the given date and property id
         Args:
             date: date value
             prop_nr: id of the property
 
         Returns:
-            Claim
+            statement of the given property number with the given value
         """
         if isinstance(date, datetime.date):
             date_value = datetime.datetime.combine(date, datetime.time())
@@ -496,10 +496,10 @@ class Wikidata:
             date_value = dateutil.parser.parse(date)
         else:
             raise Exception(f"Value '{date}' can not be parsed to date")
-        isoDate = date_value.isoformat()
-        date_string = f"+{isoDate}Z"
-        claim = Time(date_string, prop_nr=prop_nr, precision=WikibaseDatePrecision.DAY)
-        return claim
+        iso_date = date_value.isoformat()
+        date_string = f"+{iso_date}Z"
+        statement = Time(date_string, prop_nr=prop_nr, precision=WikibaseDatePrecision.DAY)
+        return statement
 
     @staticmethod
     def is_wikidata_item_id(value: str) -> bool:
