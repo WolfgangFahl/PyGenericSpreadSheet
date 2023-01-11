@@ -670,7 +670,10 @@ class PropertyMapping:
             else:
                 property_type = WdDatatype(None)  # default WdDatatype
         if property_type is not None and not isinstance(property_type, WdDatatype):
-            property_type = WdDatatype(property_type)
+            if property_type in [wd.name for wd in WdDatatype]:
+                property_type = WdDatatype[property_type]
+            else:
+                property_type = WdDatatype(None)
         mapping = PropertyMapping(
                 column=record.get("column", None),
                 propertyName=record.get("propertyName", None),
