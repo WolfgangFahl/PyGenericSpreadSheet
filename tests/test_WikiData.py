@@ -361,6 +361,16 @@ class TestPropertyMapping(BaseTest):
         self.assertTrue(positive_case.is_qualifier())
         self.assertFalse(negative_case.is_qualifier())
 
+    def test_WdDatatype_lookup(self):
+        """
+        tests the WdDatatype lookup for None and empty string as key
+        """
+        test_params = [(None, WdDatatype.text), ("", WdDatatype.text)]
+        for param in test_params:
+            with self.subTest(param=param):
+                property_type, expected = param
+                self.assertEqual(expected, WdDatatype(property_type))
+
 
 class WikidataSandboxProperties:
     """

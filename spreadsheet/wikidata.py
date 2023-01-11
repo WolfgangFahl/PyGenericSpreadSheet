@@ -661,18 +661,21 @@ class PropertyMapping:
             if key in legacy_lookup:
                 record[legacy_lookup[key]] = record[key]
         # handle missing property type
-        if record.get("propertyType", None) in [None, ""]:
+        property_type = record.get("propertyType", None)
+        if property_type in [None, ""]:
             if record.get("valueLookupType", None) not in [None, ""]:
-                record["propertyType"] = WdDatatype.itemid
+                property_type = WdDatatype.itemid
             elif record.get("value", None) not in [None, ""]:
-                record["propertyType"] = WdDatatype.itemid
-        if record.get("propertyType", None) is not None and not isinstance(record.get("propertyType"), WdDatatype):
-            record["propertyType"] = WdDatatype[record.get("propertyType", None)]
+                property_type = WdDatatype.itemid
+            else:
+                property_type = WdDatatype(None)  # default WdDatatype
+        if property_type is not None and not isinstance(property_type, WdDatatype):
+            property_type = WdDatatype(property_type)
         mapping = PropertyMapping(
                 column=record.get("column", None),
                 propertyName=record.get("propertyName", None),
                 propertyId=record.get("propertyId", None),
-                propertyType=record.get("propertyType", None),
+                propertyType=property_type,
                 qualifierOf=record.get("qualifierOf", None),
                 valueLookupType=record.get("valueLookupType", None),
                 value=record.get("value", None)
@@ -689,7 +692,7 @@ class PropertyMapping:
     @classmethod
     def get_qualifier_lookup(cls, properties: List['PropertyMapping']) -> typing.Dict[str, List['PropertyMapping']]:
         """
-        Get a lookup for a property and all its qualifie
+        Get a lookup for a property and all its qualifier
         Args:
             properties: property mappings to generate the lookup from
          Returns:
