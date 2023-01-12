@@ -454,7 +454,7 @@ class Wikidata:
         Returns:
             BaseDataType
         """
-        if value is None:
+        if value is None or value == "":
             return None
         if pm.propertyType is None:
             pm.propertyType = self.get_wddatatype_of_property(pm.propertyId)
@@ -534,7 +534,8 @@ class Wikidata:
             label = label[:limit-len(postfix)] + postfix
         return label
 
-    def get_datatype_of_property(self, property_id: Union[str, int]) -> Union[str, None]:
+    @classmethod
+    def get_datatype_of_property(cls, property_id: Union[str, int]) -> Union[str, None]:
         """
         Get the datatype of the given property
         Args:
@@ -570,7 +571,8 @@ class Wikidata:
             return None
         return types[0]
 
-    def get_wddatatype_of_property(self, property_id: Union[str, int]) -> 'WdDatatype':
+    @classmethod
+    def get_wddatatype_of_property(cls, property_id: Union[str, int]) -> 'WdDatatype':
         """
         Get the datatype of the given property
         Args:
@@ -579,7 +581,7 @@ class Wikidata:
         Returns:
             WdDatatype of the property of None if no datatype is defined
         """
-        property_type = self.get_datatype_of_property(property_id)
+        property_type = cls.get_datatype_of_property(property_id)
         return WdDatatype.get_by_wikibase(property_type)
 
 
@@ -667,13 +669,11 @@ class PropertyMapping:
                 property_type = WdDatatype.itemid
             elif record.get("value", None) not in [None, ""]:
                 property_type = WdDatatype.itemid
-            else:
-                property_type = WdDatatype(None)  # default WdDatatype
         if property_type is not None and not isinstance(property_type, WdDatatype):
             if property_type in [wd.name for wd in WdDatatype]:
                 property_type = WdDatatype[property_type]
             else:
-                property_type = WdDatatype(None)
+                property_type = Wikidata.get_wddatatype_of_property(record.get("propertyId", None))
         mapping = PropertyMapping(
                 column=record.get("column", None),
                 propertyName=record.get("propertyName", None),
