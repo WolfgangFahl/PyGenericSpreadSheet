@@ -26,6 +26,7 @@ class WikibaseQuery(object):
         self.propertiesById={}
         self.propertiesByVarname={}
         self.propertiesByColumn={}
+        self.rows=[]
         
     def addPropertyFromDescriptionRow(self,row):
         '''
@@ -34,6 +35,7 @@ class WikibaseQuery(object):
         Args:
             row(dict): the row to add
         '''
+        self.rows.append(row)
         propName=row['PropertyName']
         propId=row['PropertyId']
         column=row['Column']
@@ -208,7 +210,7 @@ SELECT ?item ?itemLabel ?itemDescription
         
         sparql=query.asSparql(filterClause=valuesClause,orderClause=f"ORDER BY ?{pkVarname}",pk=pk)
         return query,sparql
-    
+                    
     @classmethod
     def ofGoogleSheet(cls,url:str,sheetName:str="Wikidata",debug:bool=False)->dict:
         '''

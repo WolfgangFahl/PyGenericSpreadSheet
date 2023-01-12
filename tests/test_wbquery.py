@@ -90,31 +90,96 @@ class TestWikibaseQuery(BaseTest):
             print(continentRows)     
         self.assertTrue("wd:Q15" in sparqlQuery)
         
-     
     def testWikibaseQuery(self):
         '''
         test wikibase Query handling
         '''
-        url="https://docs.google.com/spreadsheets/d/16KURma_XUV68S6_VNWG-ESs-mPgbbAnnBNLwWlBnVFY"
-        debug=self.debug
-        #debug=True
-        queries=WikibaseQuery.ofGoogleSheet(url,debug=debug)
-        self.assertEqual(3,len(queries))
-        if debug:
-            print(queries.keys())
-        gs=GoogleSheet(url)
-        gs.open(["Event"]) 
-        eventRows=gs.asListOfDicts("Event")
-        eventsByLabel,_dup=LOD.getLookup(eventRows,"label")
-        eventQuery=queries["Event"]
-        if debug:
-            print(eventsByLabel.keys())
-        #filterClause=eventQuery.inFilter(eventsByLabel.keys(),"short_name","en")
-        filterClause=eventQuery.getValuesClause(eventsByLabel.keys(),lang="en")
-        sparql=eventQuery.asSparql(filterClause=filterClause,orderClause="ORDER BY ?short_name",pk="short name")
-        if debug:
-            print(sparql)
-        expected="""# 
+        testcases=[
+            ("Scholar",
+             "Scholar",
+             "WikidataMetadata",
+             "https://docs.google.com/spreadsheets/d/10YQy1Obdtqw0sNTcaQxRrB0p-sKEzbxUcFtZPkUKz-g",
+             1,
+             "item","item",
+             """# 
+# get Scholar records 
+#  
+PREFIX pq: <http://www.wikidata.org/prop/qualifier/>
+PREFIX p: <http://www.wikidata.org/prop/>
+PREFIX schema: <http://schema.org/>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX wikibase: <http://wikiba.se/ontology#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?item ?itemLabel ?itemDescription
+
+  ?family_name ?family_nameLabel
+  ?given_name ?given_nameLabel
+  ?official_website
+  ?LinkedIn_personal_profile_ID ?LinkedIn_personal_profile_IDUrl
+  ?ORCID_iD ?ORCID_iDUrl
+  ?Google_Scholar_author_ID ?Google_Scholar_author_IDUrl
+  ?GND_ID ?GND_IDUrl
+  ?DBLP_author_ID ?DBLP_author_IDUrl
+WHERE {
+  ?item rdfs:label ?itemLabel.
+  FILTER(LANG(?itemLabel) = "en")
+  OPTIONAL { 
+    ?item schema:description ?itemDescription.
+    FILTER(LANG(?itemDescription) = "en")
+  }
+
+  ?item wdt:P31 wd:Q5.
+  OPTIONAL {
+    ?item wdt:P734 ?family_name.
+    ?family_name rdfs:label ?family_nameLabel.
+    FILTER(LANG(?family_nameLabel) = "en")
+  }
+  OPTIONAL {
+    ?item wdt:P735 ?given_name.
+    ?given_name rdfs:label ?given_nameLabel.
+    FILTER(LANG(?given_nameLabel) = "en")
+  }
+  OPTIONAL {
+    ?item wdt:P856 ?official_website.
+  }
+  OPTIONAL {
+    ?item wdt:P6634 ?LinkedIn_personal_profile_ID.
+    wd:P6634 wdt:P1630 ?LinkedIn_personal_profile_IDFormatterUrl.
+    BIND(IRI(REPLACE(?LinkedIn_personal_profile_ID, '^(.+)$', ?LinkedIn_personal_profile_IDFormatterUrl)) AS ?LinkedIn_personal_profile_IDUrl).
+  }
+  OPTIONAL {
+    ?item wdt:P496 ?ORCID_iD.
+    wd:P496 wdt:P1630 ?ORCID_iDFormatterUrl.
+    BIND(IRI(REPLACE(?ORCID_iD, '^(.+)$', ?ORCID_iDFormatterUrl)) AS ?ORCID_iDUrl).
+  }
+  OPTIONAL {
+    ?item wdt:P1960 ?Google_Scholar_author_ID.
+    wd:P1960 wdt:P1630 ?Google_Scholar_author_IDFormatterUrl.
+    BIND(IRI(REPLACE(?Google_Scholar_author_ID, '^(.+)$', ?Google_Scholar_author_IDFormatterUrl)) AS ?Google_Scholar_author_IDUrl).
+  }
+  OPTIONAL {
+    ?item wdt:P227 ?GND_ID.
+    wd:P227 wdt:P1630 ?GND_IDFormatterUrl.
+    BIND(IRI(REPLACE(?GND_ID, '^(.+)$', ?GND_IDFormatterUrl)) AS ?GND_IDUrl).
+  }
+  OPTIONAL {
+    ?item wdt:P2456 ?DBLP_author_ID.
+    wd:P2456 wdt:P1630 ?DBLP_author_IDFormatterUrl.
+    BIND(IRI(REPLACE(?DBLP_author_ID, '^(.+)$', ?DBLP_author_IDFormatterUrl)) AS ?DBLP_author_IDUrl).
+  }
+
+  VALUES(?item) {
+  }.
+}
+ORDER BY ?item"""),
+            ("Event",
+             "ACISP",
+             "Wikidata",
+             "https://docs.google.com/spreadsheets/d/16KURma_XUV68S6_VNWG-ESs-mPgbbAnnBNLwWlBnVFY",
+            3,
+            "short_name","short name",
+            """# 
 # get Event records 
 #  
 PREFIX pq: <http://www.wikidata.org/prop/qualifier/>
@@ -221,7 +286,28 @@ WHERE {
   ( 'ACISP 2021'@en )
   }.
 }
-ORDER BY ?short_name""" 
-        self.assertEqual(expected,sparql)
+ORDER BY ?short_name""")
+        ]
+        debug=self.debug
+        #debug=True
+        for entityName,name,sheetName,url,expected_queries,pk,pk_label,expected in testcases:
+            #debug=True
+            queries=WikibaseQuery.ofGoogleSheet(url,sheetName=sheetName,debug=debug)
+            self.assertEqual(expected_queries,len(queries))
+            if debug:
+                print(queries.keys())
+            gs=GoogleSheet(url)
+            gs.open([entityName]) 
+            itemRows=gs.asListOfDicts(entityName)
+            itemsByLabel,_dup=LOD.getLookup(itemRows,"label")
+            itemsQuery=queries[entityName]
+            if debug:
+                print(itemsByLabel.keys())
+            #filterClause=eventQuery.inFilter(eventsByLabel.keys(),"short_name","en")
+            filterClause=itemsQuery.getValuesClause(itemsByLabel.keys(),propVarname=pk,lang="en")
+            sparql=itemsQuery.asSparql(filterClause=filterClause,orderClause=f"ORDER BY ?{pk}",pk=f"{pk_label}")
+            if debug:
+                print(sparql)
+            self.assertEqual(expected,sparql)
        
         

@@ -32,6 +32,12 @@ class GoogleSheet(object):
             csvStr=response.content.decode('utf-8')
             self.dfs[sheetName]=pd.read_csv(StringIO(csvStr),keep_default_na=False)
         
+    def filterUnnamed(self,lod:list):
+        for row in lod:
+            for key in list(row.keys()):
+                if key.startswith("Unnamed"):
+                    del row[key]
+                    
     def asListOfDicts(self,sheetName):
         '''
         convert the given sheetName to a list of dicts
@@ -40,5 +46,6 @@ class GoogleSheet(object):
             sheetName(str): the sheet to convert
         '''
         lod=self.dfs[sheetName].to_dict('records') 
+        self.filterUnnamed(lod)
         return lod
         
