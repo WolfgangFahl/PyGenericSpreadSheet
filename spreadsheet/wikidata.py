@@ -14,6 +14,7 @@ import re
 import traceback
 from typing import List, Union
 from wikibaseintegrator.datatypes import BaseDataType, URL, ExternalID, Item, Time, String, MonolingualText
+from wikibaseintegrator.entities import ItemEntity
 from wikibaseintegrator.models import Claim, Reference, Snak
 from wikibaseintegrator.wbi_config import config as wbi_config
 from wikibaseintegrator import wbi_login, WikibaseIntegrator
@@ -175,7 +176,7 @@ class Wikidata:
         Args:
             row(dict): the data row to add
             mapDict(dict): the mapping dictionary to use
-            itemId: wikidata id of the item the data should be added to. If None a new item is created
+            itemId: wikidata id of the item the data should be added to. If None a new item is created unless item id is provided in the record
             lang(str): the language for lookups
             write(bool): if True do actually write
             ignoreErrors(bool): if True ignore errors
@@ -297,7 +298,7 @@ class Wikidata:
         Args:
             record(dict): the data row to add
             property_mappings(list): the mapping dictionary to use
-            item_id: wikidata id of the item the data should be added to. If None a new item is created
+            item_id: wikidata id of the item the data should be added to. If None a new item is created unless item id is provided in the record
             lang(str): the language for lookups
             write(bool): if True do actually write
             ignore_errors(bool): if True ignore errors
@@ -310,7 +311,11 @@ class Wikidata:
         claims = []
         errors = dict()
         qualifier_lookup = PropertyMapping.get_qualifier_lookup(property_mappings)
-        properties = [pm for pm in property_mappings if not pm.is_qualifier()]
+        item_mapping = PropertyMapping.get_item_mapping(property_mappings)
+        if item_mapping is not None:
+            if item_id is None:
+                item_id = record.get(item_mapping.column, None)
+        properties = [pm for pm in property_mappings if not pm.is_qualifier() and not pm.is_item_itself()]
         for prop in properties:
             qualifier_mappings = qualifier_lookup.get(prop.column, None)
             prop_claims, claim_errors = self._get_statement_for_property(record, prop, qualifier_mappings, reference, lang)
@@ -408,7 +413,7 @@ class Wikidata:
                         print(traceback.format_exc())
         return errors
 
-    def get_or_create_item(self, item_id:str):
+    def get_or_create_item(self, item_id: typing.Union[str, None]) -> ItemEntity:
         """
         Get or create the requested wikidata item
         Args:
@@ -589,6 +594,7 @@ class WdDatatype(Enum):
     """
     Supported wikidata datatypes
     """
+    item = auto()
     itemid = auto()
     year = auto()
     date = auto()
@@ -692,6 +698,12 @@ class PropertyMapping:
         is_qualifier = not (self.qualifierOf is None or self.qualifierOf == "")
         return is_qualifier
 
+    def is_item_itself(self) -> bool:
+        """
+        Returns true if the property mapping links to the existing item
+        """
+        return self.propertyType == WdDatatype.item
+
     @classmethod
     def get_qualifier_lookup(cls, properties: List['PropertyMapping']) -> typing.Dict[str, List['PropertyMapping']]:
         """
@@ -713,6 +725,15 @@ class PropertyMapping:
                 else:
                     res[pm.qualifierOf] = [pm]
         return res
+
+    @classmethod
+    def get_item_mapping(cls, property_mappings: List['PropertyMapping']) -> 'PropertyMapping':
+        """
+        get the property mapping that is
+        """
+        for pm in property_mappings:
+            if pm.is_item_itself():
+                return pm
 
 
 class UrlReference(Reference):
