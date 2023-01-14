@@ -61,3 +61,12 @@ class TestPropertyMapping(BaseTest):
             with self.subTest(param=param):
                 property_type, expected = param
                 self.assertEqual(expected, WdDatatype(property_type))
+                
+    def test_DefaultItemPropertyMapping(self):
+        """
+        test the default item PropertyMapping
+        """
+        itemMapping=PropertyMapping.getDefaultItemPropertyMapping()
+        self.assertIsNotNone(itemMapping)
+        self.assertTrue(isinstance(itemMapping,PropertyMapping))
+        self.assertTrue(itemMapping.is_item_itself())

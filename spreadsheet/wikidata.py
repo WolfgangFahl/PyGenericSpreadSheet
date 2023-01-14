@@ -698,6 +698,19 @@ class PropertyMapping:
         """
         is_qualifier = not (self.qualifierOf is None or self.qualifierOf == "")
         return is_qualifier
+    
+    @classmethod
+    def getDefaultItemPropertyMapping(cls)->"PropertyMapping":
+        """
+        get the defaultItemPropertyMapping
+        """
+        if not hasattr(cls,"defaultItemPropertyMapping"):
+            cls.getDefaultItemPropertyMapping=PropertyMapping(
+                column="item",
+                propertyName="item",
+                propertyId=None,
+                propertyType=WdDatatype.item)
+        return cls.getDefaultItemPropertyMapping
 
     def is_item_itself(self) -> bool:
         """
@@ -730,11 +743,13 @@ class PropertyMapping:
     @classmethod
     def get_item_mapping(cls, property_mappings: List['PropertyMapping']) -> 'PropertyMapping':
         """
-        get the property mapping that is
+        get the property mapping that is used for the default "item" primary key
+        if no property is defined use the default "item" mapping 
         """
         for pm in property_mappings:
             if pm.is_item_itself():
                 return pm
+        return PropertyMapping.getDefaultItemPropertyMapping()
 
 class UrlReference(Reference):
     """
