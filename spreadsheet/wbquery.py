@@ -188,7 +188,7 @@ SELECT ?item ?itemLabel ?itemDescription
         return sparql
             
     @classmethod
-    def sparqlOfGoogleSheet(cls,url:str,sheetName:str,entityName:str,pkColumn:str,mappingSheetName="WikidataMetadata",lang:str="en",debug:bool=False):
+    def sparqlOfGoogleSheet(cls,url:str,sheetName:str,entityName:str,pkColumn:str,mappingSheetName="WikidataMapping",lang:str="en",debug:bool=False):
         '''
         get a sparql query for the given google sheet
         
