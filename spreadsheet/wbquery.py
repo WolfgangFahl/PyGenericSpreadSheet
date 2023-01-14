@@ -110,9 +110,12 @@ class WikibaseQuery(object):
                         value=value.replace(wbPrefix,"")
                     valuesClause+=f"\n   ( wd:{value} )"
                 else:
-                    # escape single quotes
-                    value=value.replace("'","\\'")
-                    valuesClause+=f"\n  ( '{value}'{lang} )"
+                    if isinstance(value,str):
+                        # escape single quotes
+                        value=value.replace("'","\\'")
+                        valuesClause+=f"\n  ( '{value}'{lang} )"
+                    else:
+                        valuesClause+=f"\n  ( {str(value)} )"
         valuesClause+="\n  }."
         return valuesClause
         

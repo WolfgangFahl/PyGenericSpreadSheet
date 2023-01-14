@@ -310,6 +310,7 @@ class Wikidata:
         claims = []
         errors = dict()
         qualifier_lookup = PropertyMapping.get_qualifier_lookup(property_mappings)
+        # check if there is a existing Q-Item identifier in the record
         item_mapping = PropertyMapping.get_item_mapping(property_mappings)
         if item_mapping is not None:
             if item_id is None:
@@ -322,6 +323,7 @@ class Wikidata:
             claims.extend(prop_claims)
         label = self.sanitize_label(record.get("label", None))
         description = record.get("description", None)
+        # handle get or create case
         item = self.get_or_create_item(item_id)
         item.add_claims(claims)
         if label:
