@@ -188,7 +188,7 @@ SELECT ?item ?itemLabel ?itemDescription
         return sparql
             
     @classmethod
-    def sparqlOfGoogleSheet(cls,url:str,sheetName:str,entityName:str,pkColumn:str,mappingSheetName="Wikidata",lang:str="en",debug:bool=False):
+    def sparqlOfGoogleSheet(cls,url:str,sheetName:str,entityName:str,pkColumn:str,mappingSheetName="WikidataMetadata",lang:str="en",debug:bool=False):
         '''
         get a sparql query for the given google sheet
         
@@ -220,7 +220,7 @@ SELECT ?item ?itemLabel ?itemDescription
         return query,sparql
                     
     @classmethod
-    def ofGoogleSheet(cls,url:str,sheetName:str="Wikidata",debug:bool=False)->dict:
+    def ofGoogleSheet(cls,url:str,sheetName:str="WikidataMetadata",debug:bool=False)->dict:
         '''
         create a dict of wikibaseQueries from the given google sheets row descriptions
         

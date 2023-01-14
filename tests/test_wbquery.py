@@ -27,7 +27,7 @@ class TestWikibaseQuery(BaseTest):
         debug=self.debug
         #debug=True
         url="https://docs.google.com/spreadsheets/d/1AZ4tji1NDuPZ0gwsAxOADEQ9jz_67yRao2QcCaJQjmk"
-        sheetName="WorldPrayerDays"
+        sheetName="WorldPrayerDay"
         entityName="WorldPrayerDay"
         _query,sparqlQuery=WikibaseQuery.sparqlOfGoogleSheet(url,sheetName,entityName,pkColumn="Theme",debug=debug)
         if debug:
