@@ -420,7 +420,7 @@ class Wikidata:
         Args:
             item_id: item to retrieve if None create a new item
         """
-        if item_id is None:
+        if item_id is None or isinstance(item_id,str) and item_id.strip()=="":
             item = self.wbi.item.new()
         else:
             item = self.wbi.item.get(item_id)
