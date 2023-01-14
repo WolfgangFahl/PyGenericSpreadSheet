@@ -705,12 +705,12 @@ class PropertyMapping:
         get the defaultItemPropertyMapping
         """
         if not hasattr(cls,"defaultItemPropertyMapping"):
-            cls.getDefaultItemPropertyMapping=PropertyMapping(
+            cls.defaultItemPropertyMapping=PropertyMapping(
                 column="item",
                 propertyName="item",
                 propertyId=None,
                 propertyType=WdDatatype.item)
-        return cls.getDefaultItemPropertyMapping
+        return cls.defaultItemPropertyMapping
 
     def is_item_itself(self) -> bool:
         """
@@ -749,7 +749,8 @@ class PropertyMapping:
         for pm in property_mappings:
             if pm.is_item_itself():
                 return pm
-        return PropertyMapping.getDefaultItemPropertyMapping()
+        pm=cls.getDefaultItemPropertyMapping()
+        return pm
 
 class UrlReference(Reference):
     """
