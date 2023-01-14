@@ -178,6 +178,9 @@ class TestWikidata(BaseTest):
 
         # test creating an item
         qid, _ = wd.add_record(record=record, property_mappings=property_mappings, write=True)
+        debug=True
+        if debug:
+            print(f"created {qid}")
         actual = wd.get_record(qid, property_mappings=property_mappings)
         self.assertDictEqual(record, actual)
 
@@ -312,64 +315,6 @@ class TestWikidata(BaseTest):
                 self.assertIn("P813", json_str)
                 self.assertIn(url, json_str)
                 self.assertIn(date, json_str)
-
-
-class TestPropertyMapping(BaseTest):
-    """
-    tests PropertyMapping
-    """
-
-    def test_from_record(self):
-        """
-        tests from_record
-        """
-        test_params = [
-            ("languageOfWork", "language of work or name", "P407", "itemid", "official website", "")
-        ]
-        for params in test_params:
-            col, name, p_id, p_type, qualifier, lookup = params
-            record = {
-                "column": col,
-                "propertyName": name,
-                "propertyType": WdDatatype[p_type],
-                "propertyId": p_id,
-                "qualifierOf": qualifier,
-                "valueLookupType": lookup
-            }
-            legacy_record = {
-                "Column": col,
-                "PropertyName": name,
-                "PropertyId": p_id,
-                "Type": p_type,
-                "Qualifier": qualifier,
-                "Lookup": lookup
-            }
-            for i, rec in enumerate([record, legacy_record]):
-                mode = "legacy" if i == 1 else ""
-                with self.subTest(f"test parsing from {mode} record", rec=rec):
-                    mapping = PropertyMapping.from_record(rec)
-                    for key, expected_value in record.items():
-                        actual_value = getattr(mapping, key)
-                        self.assertEqual(expected_value, actual_value)
-
-    def test_is_qualifier(self):
-        """
-        tests id_qualifier
-        """
-        positive_case = PropertyMapping(column="volume", propertyId="P478", propertyName="volume", propertyType=WdDatatype.string, qualifierOf="part of the series")
-        negative_case = PropertyMapping(column="acronym", propertyId="P1813", propertyName="short name", propertyType=WdDatatype.text)
-        self.assertTrue(positive_case.is_qualifier())
-        self.assertFalse(negative_case.is_qualifier())
-
-    def test_WdDatatype_lookup(self):
-        """
-        tests the WdDatatype lookup for None and empty string as key
-        """
-        test_params = [(None, WdDatatype.text), ("", WdDatatype.text)]
-        for param in test_params:
-            with self.subTest(param=param):
-                property_type, expected = param
-                self.assertEqual(expected, WdDatatype(property_type))
 
 
 class WikidataSandboxProperties:

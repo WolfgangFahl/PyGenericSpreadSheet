@@ -19,7 +19,6 @@ from wikibaseintegrator.models import Claim, Reference, Snak
 from wikibaseintegrator.wbi_config import config as wbi_config
 from wikibaseintegrator import wbi_login, WikibaseIntegrator
 from lodstorage.sparql import SPARQL
-import pprint
 import dateutil.parser
 from wikibaseintegrator.wbi_enums import WikibaseDatePrecision
 
@@ -315,6 +314,7 @@ class Wikidata:
         if item_mapping is not None:
             if item_id is None:
                 item_id = record.get(item_mapping.column, None)
+        # get the properties excluding the item column
         properties = [pm for pm in property_mappings if not pm.is_qualifier() and not pm.is_item_itself()]
         for prop in properties:
             qualifier_mappings = qualifier_lookup.get(prop.column, None)
@@ -735,7 +735,6 @@ class PropertyMapping:
         for pm in property_mappings:
             if pm.is_item_itself():
                 return pm
-
 
 class UrlReference(Reference):
     """
