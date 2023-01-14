@@ -309,5 +309,31 @@ ORDER BY ?short_name""")
             if debug:
                 print(sparql)
             self.assertEqual(expected,sparql)
+            
+            
+    def testLodLookup(self):
+        """
+        """
+        lod=[{
+  'item ': '',
+  'label ': '',
+  'ordinal ': 14,
+  'ordinalStr ': '',
+  'description ': '',
+  'Title ': '',
+  'Acronym ': 'MTSR 2021',
+  'OpenLibraryId ': '',
+  'oclcId ': '',
+  'isbn13 ': '',
+  'ppnId ': '',
+  'gndId ': '',
+  'dblpId ': '',
+  'doi ': '',
+  'Event ': '',
+  'publishedIn ': '',
+  'lodRowIndex': 0
+}]
+        for record in lod:
+            self.assertTrue("doi" in record)
        
         

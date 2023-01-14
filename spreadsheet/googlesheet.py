@@ -32,10 +32,19 @@ class GoogleSheet(object):
             csvStr=response.content.decode('utf-8')
             self.dfs[sheetName]=pd.read_csv(StringIO(csvStr),keep_default_na=False)
         
-    def filterUnnamed(self,lod:list):
+    def fixRows(self,lod:list):
+        """
+        fix Rows by filtering unnamed columns and trimming
+        column names
+        """
         for row in lod:
             for key in list(row.keys()):
                 if key.startswith("Unnamed"):
+                    del row[key]
+                trimmedKey=key.strip()
+                if trimmedKey!=key:
+                    value=row[key]
+                    row[trimmedKey]=value
                     del row[key]
                     
     def asListOfDicts(self,sheetName):
@@ -46,6 +55,6 @@ class GoogleSheet(object):
             sheetName(str): the sheet to convert
         '''
         lod=self.dfs[sheetName].to_dict('records') 
-        self.filterUnnamed(lod)
+        self.fixRows(lod)
         return lod
         

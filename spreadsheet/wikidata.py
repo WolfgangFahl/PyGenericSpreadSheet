@@ -170,7 +170,6 @@ class Wikidata:
             ignoreErrors:bool=False
     ) -> (str, dict):
         """
-        ToDo: Refactor to use add_record
         add the given row mapping with the given map Dict
 
         Args:

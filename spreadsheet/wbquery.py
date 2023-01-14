@@ -59,9 +59,13 @@ class WikibaseQuery(object):
         Returns:
             column,propType,varName tupel
         '''
-        column=self.propertiesByName[propName]["Column"]
-        propType=self.propertiesByName[propName]["Type"]
-        varName=self.propertiesByName[propName]["PropVarname"]
+        if propName in self.propertiesByName:
+            propRow=self.propertiesByName[propName]
+            column=propRow["Column"]
+            propType=propRow["Type"]
+            varName=propRow["PropVarname"]
+        else:
+            raise Exception(f"unknown property name {propName} for entity {self.entity}")
         return column,propType,varName
         
         
@@ -101,7 +105,7 @@ class WikibaseQuery(object):
             lang=''
         for value in values:
             if value or not ignoreEmpty:
-                if not propType:
+                if not propType or propType=="item":
                     if value and value.startswith(wbPrefix):
                         value=value.replace(wbPrefix,"")
                     valuesClause+=f"\n   ( wd:{value} )"
@@ -141,7 +145,7 @@ SELECT ?item ?itemLabel ?itemDescription
             propLabel=f" ?{propVarname}Label" if not propType else ""
             # extid' will automatically fetch formatted URIs
             propUrl=f" ?{propVarname}Url" if propType=="extid" else ""
-            if not propValue:
+            if not propValue and propVarname:
                 sparql+=f"\n  ?{propVarname}{propLabel}{propUrl}"
         sparql+="""\nWHERE {
   ?item rdfs:label ?itemLabel.
@@ -159,19 +163,20 @@ SELECT ?item ?itemLabel ?itemDescription
             if propValue:
                 sparql+=f"\n  ?item wdt:{propId} wd:{propValue}."
             else:
-                # primary keys are not optional
-                optional=pk is None or not propName==pk
-                if optional:
-                    sparql+=f"\n  OPTIONAL {{"
-                sparql+=f"\n    ?item wdt:{propId} ?{propVarname}."
-                if not propType:
-                    sparql+=f"\n    ?{propVarname} rdfs:label ?{propVarname}Label."
-                    sparql+=f"""\n    FILTER(LANG(?{propVarname}Label) = "{lang}")"""
-                elif propType=="extid":
-                    sparql+=f"\n    wd:{propId} wdt:P1630 ?{propVarname}FormatterUrl." 
-                    sparql+=f"\n    BIND(IRI(REPLACE(?{propVarname}, '^(.+)$', ?{propVarname}FormatterUrl)) AS ?{propVarname}Url)."
-                if optional:
-                    sparql+=f"\n  }}"
+                if propVarname:
+                    # primary keys are not optional
+                    optional=pk is None or not propName==pk
+                    if optional:
+                        sparql+=f"\n  OPTIONAL {{"
+                    sparql+=f"\n    ?item wdt:{propId} ?{propVarname}."
+                    if not propType:
+                        sparql+=f"\n    ?{propVarname} rdfs:label ?{propVarname}Label."
+                        sparql+=f"""\n    FILTER(LANG(?{propVarname}Label) = "{lang}")"""
+                    elif propType=="extid":
+                        sparql+=f"\n    wd:{propId} wdt:P1630 ?{propVarname}FormatterUrl." 
+                        sparql+=f"\n    BIND(IRI(REPLACE(?{propVarname}, '^(.+)$', ?{propVarname}FormatterUrl)) AS ?{propVarname}Url)."
+                    if optional:
+                        sparql+=f"\n  }}"
         if filterClause is not None:
                 sparql+=f"\n{filterClause}"        
         sparql+="\n}"
