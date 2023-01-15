@@ -220,7 +220,7 @@ SELECT ?item ?itemLabel ?itemDescription
         return query,sparql
                     
     @classmethod
-    def ofGoogleSheet(cls,url:str,sheetName:str="WikidataMetadata",debug:bool=False)->dict:
+    def ofGoogleSheet(cls,url:str,sheetName:str="WikidataMapping",debug:bool=False)->dict:
         '''
         create a dict of wikibaseQueries from the given google sheets row descriptions
         
