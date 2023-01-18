@@ -170,7 +170,7 @@ class TestWikidata(BaseTest):
             "text": "test",
             "date": datetime.now().date(),
             "dateQualifier": datetime.now().year,
-            "item": "Q377",
+            "item_id": "Q377",
             "url": "https://example.org",
             "year": 2000,
             "identifier": str(uuid.uuid4())
@@ -239,10 +239,10 @@ class TestWikidata(BaseTest):
         """
         lookup_type, label, expected_qid = ("Q3336843", "Scotland", "Q22")  # type qid, label, qid
         mappings = [
-            PropertyMapping("item", "wikibase-item sandbox property", "P95201", propertyType=WdDatatype.itemid, valueLookupType=lookup_type)
+            PropertyMapping("item_id", "wikibase-item sandbox property", "P95201", propertyType=WdDatatype.itemid, valueLookupType=lookup_type)
         ]
-        record = {"label": str(uuid.uuid4()), "item": label}
-        expected_record = {"label": record["label"], "item": expected_qid}
+        record = {"label": str(uuid.uuid4()), "item_id": label}
+        expected_record = {"label": record["label"], "item_id": expected_qid}
 
         wd = Wikidata(baseurl="https://test.wikidata.org")
         wd.loginWithCredentials()
@@ -268,7 +268,7 @@ class TestWikidata(BaseTest):
             "text": ["Hello", "World"],
             "date": [datetime.now().date(), datetime.fromisoformat("2000-01-01").date()],
             "url": ["http://example.org", "http://example.org/test"],
-            "item": ["Q377", "Q344"],
+            "item_id": ["Q377", "Q344"],
             "identifier": [str(uuid.uuid4()), str(uuid.uuid4())]
         }
         qid, _ = self.test_wikidata.add_record(record, property_mappings=property_mappings, write=True)
@@ -323,7 +323,7 @@ class WikidataSandboxProperties:
     """
     TEXT = PropertyMapping(column="text", propertyId="P95227", propertyName="monolingualtext sandbox property", propertyType=WdDatatype.text)
     DATE = PropertyMapping(column="date", propertyId="P95226", propertyName="time sandbox property", propertyType=WdDatatype.date)
-    ITEM = PropertyMapping(column="item", propertyId="P95201", propertyName="wikibase-item sandbox property",propertyType=WdDatatype.itemid)
+    ITEM = PropertyMapping(column="item_id", propertyId="P95201", propertyName="wikibase-item sandbox property",propertyType=WdDatatype.itemid)
     URL = PropertyMapping(column="url", propertyId="P95231", propertyName="url sandbox property",propertyType=WdDatatype.url)
     YEAR = PropertyMapping(column="year", propertyId="P96927", propertyName="year sandbox property",propertyType=WdDatatype.year)
     EXT_ID = PropertyMapping(column="identifier", propertyId="P95232", propertyName="external-id sandbox property", propertyType=WdDatatype.extid)
