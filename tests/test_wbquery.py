@@ -175,7 +175,7 @@ WHERE {
 ORDER BY ?item"""),
             ("Event",
              "ACISP",
-             "Wikidata",
+             "WikidataMapping",
              "https://docs.google.com/spreadsheets/d/16KURma_XUV68S6_VNWG-ESs-mPgbbAnnBNLwWlBnVFY",
             3,
             "short_name","short name",
@@ -203,6 +203,7 @@ SELECT ?item ?itemLabel ?itemDescription
   ?describedAt
   ?official_website
   ?WikiCFP_event_ID ?WikiCFP_event_IDUrl
+  ?DBLP_event_ID ?DBLP_event_IDUrl
 WHERE {
   ?item rdfs:label ?itemLabel.
   FILTER(LANG(?itemLabel) = "en")
@@ -255,6 +256,11 @@ WHERE {
     ?item wdt:P5124 ?WikiCFP_event_ID.
     wd:P5124 wdt:P1630 ?WikiCFP_event_IDFormatterUrl.
     BIND(IRI(REPLACE(?WikiCFP_event_ID, '^(.+)$', ?WikiCFP_event_IDFormatterUrl)) AS ?WikiCFP_event_IDUrl).
+  }
+  OPTIONAL {
+    ?item wdt:P10692 ?DBLP_event_ID.
+    wd:P10692 wdt:P1630 ?DBLP_event_IDFormatterUrl.
+    BIND(IRI(REPLACE(?DBLP_event_ID, '^(.+)$', ?DBLP_event_IDFormatterUrl)) AS ?DBLP_event_IDUrl).
   }
 
   VALUES(?short_name) {
@@ -309,4 +315,3 @@ ORDER BY ?short_name""")
             if debug:
                 print(sparql)
             self.assertEqual(expected,sparql)
-        
