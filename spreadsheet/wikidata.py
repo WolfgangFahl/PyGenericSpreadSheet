@@ -143,12 +143,13 @@ class Wikidata:
                 ?item wdt:P31 wd:%s.
                 ?item rdfs:label ?itemLabel.
                 # short name
-                ?item wdt:P1813 %s
+                BIND(%s as ?shortNameLabel )
+                ?item wdt:P1813 ?shortNameLabel
                 FILTER(LANG(?itemLabel)= "%s" )
               } UNION {
                 ?item wdt:P31 wd:%s.
+                BIND(%s as ?itemLabel )
                 ?item rdfs:label ?itemLabel.
-                FILTER(?itemLabel= %s )
               }
             }""" % (itemType,itemLabel,lang,itemType,itemLabel)
         endpointUrl="https://query.wikidata.org/sparql"
@@ -319,6 +320,7 @@ class Wikidata:
         for prop in properties:
             qualifier_mappings = qualifier_lookup.get(prop.column, None)
             prop_claims, claim_errors = self._get_statement_for_property(record, prop, qualifier_mappings, reference, lang)
+            # merge error dicts to one dict
             errors = {**errors, **claim_errors}
             claims.extend(prop_claims)
         label = self.sanitize_label(record.get("label", None))
@@ -377,6 +379,7 @@ class Wikidata:
                 # add qualifier
                 if qualifier_mappings is not None:
                     qualifier_errors = self._add_qualifier_to_statement(record, statement, qualifier_mappings, lang)
+                    # merge error dicts to one dict
                     errors = {**errors, **qualifier_errors}
             if statement is not None:
                 claims.append(statement)
