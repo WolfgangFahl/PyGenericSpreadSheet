@@ -143,8 +143,15 @@ class TestWikidata(BaseTest):
         tests get_record
         ToDo: add more test cases
         """
-        expected = {"P31": "Q1143604", "P1813": "JIST-WP 2017", "P577": datetime(2017, 11, 20).date(), "P973": "http://ceur-ws.org/Vol-2000/"}
-        actual = self.wd.get_record("Q113543868", expected.keys(), include_label=False, include_description=False)
+        expected = {
+            "P31": "Q1143604",
+            "P1813": "JIST-WP 2017",
+            "P577": datetime(2017, 11, 20).date(),
+            "P973": "http://ceur-ws.org/Vol-2000/",
+            "P0": None # invalid prop id to test invalid key handling
+        }
+        prop_ids = list(expected.keys())
+        actual = self.wd.get_record("Q113543868", prop_ids, include_label=False, include_description=False)
         self.assertDictEqual(expected, actual)
 
     @unittest.skipIf(BaseTest.inPublicCI(), "Tests creating and modifying items. To run in CI setup credentials")

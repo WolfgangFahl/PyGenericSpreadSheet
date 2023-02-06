@@ -223,7 +223,10 @@ class Wikidata:
             prop_id = prop
             if isinstance(prop, PropertyMapping):
                 prop_id = prop.propertyId
-            statements = item.claims.get(prop_id)
+            if prop_id in item.claims:
+                statements = item.claims.get(prop_id)
+            else:
+                statements = []
             prop_label = prop_id
             if isinstance(prop, PropertyMapping):
                 prop_label = prop.column
@@ -233,13 +236,18 @@ class Wikidata:
                 values.append(value)
                 if isinstance(prop, PropertyMapping) and prop.column in qualifier_lookup:
                     for qualifier_pm in qualifier_lookup[prop.column]:
-                        qualifier_statements = statement.qualifiers.get(qualifier_pm.propertyId)  # ToDo: not fail-safe
+                        if qualifier_pm.propertyId in statement.qualifiers.qualifiers:
+                            qualifier_statements = statement.qualifiers.get(qualifier_pm.propertyId)
+                        else:
+                            qualifier_statements = []
                         qualifier_values = []
                         for qualifier_statement in qualifier_statements:
                             qualifier_values.append(self._get_statement_value(qualifier_statement))
                         record[qualifier_pm.column] = qualifier_values[0] if len(qualifier_values) == 1 else qualifier_values
             if len(values) == 1:
                 record[prop_label] = values[0]
+            elif values == []:
+                record[prop_label] = None
             else:
                 record[prop_label] = values
         return record
