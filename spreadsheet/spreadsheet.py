@@ -11,7 +11,6 @@ from zipfile import ZipFile
 from lodstorage.csv import CSV
 from pandas import Timestamp, NaT
 from datetime import datetime, date
-from werkzeug.datastructures import FileStorage
 
     
 class Format:
@@ -131,14 +130,15 @@ class SpreadSheet:
         spreadsheet = None
         # TODO - use SpreadSheeeType enum instead
         spreadSheetTypes=[OdsDocument, ExcelDocument, CSVSpreadSheet]
-        if isinstance(document, FileStorage):
-            document.stream.seek(0)
-            for spreadSheetType in spreadSheetTypes:
-                if document.filename.endswith(spreadSheetType.FILE_TYPE):
-                    documentName=document.filename[:-len(spreadSheetType.FILE_TYPE)]
-                    documentSpreadSheetType=spreadSheetType
-                    break
-        elif isinstance(document, io.BytesIO) or isinstance(document, io.StringIO) or isinstance(document, io.TextIOWrapper):
+        # TODO Get rid of Werkzeug dependency ...
+        #if isinstance(document, FileStorage):
+        #    document.stream.seek(0)
+        #    for spreadSheetType in spreadSheetTypes:
+        #        if document.filename.endswith(spreadSheetType.FILE_TYPE):
+        #            documentName=document.filename[:-len(spreadSheetType.FILE_TYPE)]
+        #            documentSpreadSheetType=spreadSheetType
+        #            break
+        if isinstance(document, io.BytesIO) or isinstance(document, io.StringIO) or isinstance(document, io.TextIOWrapper):
             document.seek(0)
             for spreadSheetType in spreadSheetTypes:
                 if document.name.endswith(spreadSheetType.FILE_TYPE):

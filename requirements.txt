@@ -15,5 +15,3 @@ gspread>=5.4.0
 #wikidataintegrator~=0.9.22
 # https://github.com/LeMyst/WikibaseIntegrator
 wikibaseintegrator~=0.12.1
-# https://stackoverflow.com/questions/71652965/importerror-cannot-import-name-safe-str-cmp-from-werkzeug-security
-Werkzeug~=2.0.0

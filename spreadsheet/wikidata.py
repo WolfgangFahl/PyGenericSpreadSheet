@@ -313,7 +313,7 @@ class Wikidata:
             reference: reference to add to all claims
 
         Returns:
-            (qId, errors)
+            (qId, errors): the wikidata item create (if any) and a dict of errors
         """
         claims = []
         errors = dict()
@@ -342,7 +342,10 @@ class Wikidata:
             item.descriptions.set(language=lang, value=description)
         if write:
             if len(errors) == 0 or ignore_errors:
-                item = item.write(summary=summary)
+                try:
+                    item = item.write(summary=summary)
+                except Exception as ex:
+                    errors["write failed"]=ex
         return item.id, errors
 
     def _get_statement_for_property(
