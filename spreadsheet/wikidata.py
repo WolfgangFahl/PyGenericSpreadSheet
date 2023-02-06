@@ -7,6 +7,7 @@ import datetime
 import typing
 from dataclasses import dataclass
 from enum import auto, Enum
+from itertools import groupby
 from pathlib import Path
 import json
 import os
@@ -20,7 +21,7 @@ from wikibaseintegrator.wbi_config import config as wbi_config
 from wikibaseintegrator import wbi_login, WikibaseIntegrator
 from lodstorage.sparql import SPARQL
 import dateutil.parser
-from wikibaseintegrator.wbi_enums import WikibaseDatePrecision
+from wikibaseintegrator.wbi_enums import WikibaseDatePrecision, WikibaseRank
 
 from spreadsheet.version import Version
 
@@ -183,18 +184,16 @@ class Wikidata:
         Returns:
             (qid, errors)
         """
-        mappings = []
-        for record in mapDict.values():
-            mapping = PropertyMapping.from_record(record)
-            mappings.append(mapping)
+        mappings = PropertyMapping.from_records(mapDict)
         return self.add_record(row, mappings, item_id=itemId, lang=lang, write=write, ignore_errors=ignoreErrors)
 
     def get_record(
             self,
             item_id:str,
-            property_mappings: Union[List[str], List['PropertyMapping']],
+            property_mappings: Union[List[str], List['PropertyMapping'], typing.Dict[str, dict]],
             include_label: bool = True,
-            include_description: bool = True
+            include_description: bool = True,
+            label_for_qids: bool = False
     ) -> dict:
         """
         Get the properties form the given item
@@ -203,12 +202,14 @@ class Wikidata:
             property_mappings: list of property values to extract
             include_label:
             include_description:
-
+            label_for_qids: If True fetch the label for a linked Qid
         Returns:
             dict with the property values
         """
         item = self.wbi.item.get(item_id)
         lang = "en"
+        if isinstance(property_mappings, dict):
+            property_mappings = PropertyMapping.from_records(property_mappings)
         record = dict()
         if include_label and item.labels.get(lang) is not None:
             record["label"] = item.labels.get(lang).value
@@ -223,16 +224,18 @@ class Wikidata:
             prop_id = prop
             if isinstance(prop, PropertyMapping):
                 prop_id = prop.propertyId
-            if prop_id in item.claims:
-                statements = item.claims.get(prop_id)
-            else:
-                statements = []
+            statements = self._get_statements_by_pid(item, prop_id)
             prop_label = prop_id
             if isinstance(prop, PropertyMapping):
                 prop_label = prop.column
             values = []
             for statement in statements:
                 value = self._get_statement_value(statement)
+                if label_for_qids:
+                    if prop.valueLookupType is not None and statement.mainsnak.datatype == "wikibase-item":
+                        label = self.get_item_label(value, lang)
+                        if label is not None:
+                            value = label
                 values.append(value)
                 if isinstance(prop, PropertyMapping) and prop.column in qualifier_lookup:
                     for qualifier_pm in qualifier_lookup[prop.column]:
@@ -251,6 +254,51 @@ class Wikidata:
             else:
                 record[prop_label] = values
         return record
+
+    def get_item_label(self, item_id: str, lang: str = None) -> typing.Union[str, None]:
+        """
+        Get the label for the given item id
+        Args:
+            item_id: id of the item
+            lang: label language to return. Default is "en"
+
+        Returns:
+            str: label of the item
+            None: If the label can not be determined or the item_id is None or can not be found
+        """
+        if lang is None:
+            lang = "en"
+        label = None
+        if item_id is not None:
+            linked_item = self.wbi.item.get(item_id)
+            linked_item_label = linked_item.labels.get(lang)
+            if linked_item_label is not None:
+                label = linked_item_label.value
+        return label
+
+    def _get_statements_by_pid(self, item: ItemEntity, pid: str) -> List[Item]:
+        """
+        Get the property statements of the item for the given Pid.
+        if ranking is established between the statements return only the highest rank
+        Args:
+            item: item to get the statements from
+            pid: property id
+        Returns:
+            list: list of the property statements
+        """
+        if pid in item.claims:
+            statements = item.claims.get(pid)
+        else:
+            statements = []
+        if len(statements) > 1:
+            ordered_stats = {k: list(g) for k, g in groupby(statements, lambda x: x.rank)}
+            rank_by_preference = [WikibaseRank.PREFERRED, WikibaseRank.NORMAL, WikibaseRank.DEPRECATED]
+            for rank in rank_by_preference:
+                if rank in ordered_stats:
+                    statements = ordered_stats[rank]
+                    break
+        return statements
+
 
     def _get_statement_value(self, statement: Union[Claim, Snak]) -> typing.Any:
         """
@@ -658,6 +706,22 @@ class PropertyMapping:
     qualifierOf: str = None
     valueLookupType: typing.Any = None  # type (instance of/P31) of the property value → used to lookup the qid if property value if value is not already a qid
     value: typing.Any = None  # set this value for the property
+
+    @classmethod
+    def from_records(cls, prop_mapping_records: typing.Dict[str, dict]) -> List['PropertyMapping']:
+        """
+        convert given list of property mapping records to list of PropertyMappings
+        Args:
+            prop_mapping_records: records to convert
+
+        Returns:
+            property mappings
+        """
+        mappings = []
+        for record in prop_mapping_records.values():
+            mapping = PropertyMapping.from_record(record)
+            mappings.append(mapping)
+        return mappings
 
     @classmethod
     def from_record(cls, record: dict) -> 'PropertyMapping':

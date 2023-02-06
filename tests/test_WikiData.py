@@ -154,6 +154,41 @@ class TestWikidata(BaseTest):
         actual = self.wd.get_record("Q113543868", prop_ids, include_label=False, include_description=False)
         self.assertDictEqual(expected, actual)
 
+    def test_get_record_label(self):
+        """
+        test get_record with property mapping to extract the label of item links
+        """
+        pm = PropertyMapping(
+                column="country",
+                propertyName="country",
+                propertyType=WdDatatype.itemid,
+                propertyId="P17",
+                valueLookupType="Q3624078"
+        )
+        item_id = "Q64"  # Berlin
+        expected = {"country": "Germany"}
+        actual = self.wd.get_record(
+                item_id,
+                property_mappings=[pm],
+                include_label=False,
+                include_description=False,
+            label_for_qids=True
+        )
+        self.assertDictEqual(expected, actual)
+
+    @unittest.skipIf(BaseTest.inPublicCI(), "Tests querying wikidata which is often blocked on public CI")
+    def test_get_item_label(self):
+        """
+        tests get_item_label
+        """
+        test_params = [("Q64", "en", "Berlin"), ("Q183", "en", "Germany"), ("Q183", "de", "Deutschland"),
+                       ("Q64", "xxx", None), (None, "en", None), ("Q183", None, "Germany")]
+        for test_param in test_params:
+            with self.subTest(test_param=test_param):
+                item_id, lang, expected_label = test_param
+                actual_label = self.wd.get_item_label(item_id, lang)
+                self.assertEqual(expected_label, actual_label)
+
     @unittest.skipIf(BaseTest.inPublicCI(), "Tests creating and modifying items. To run in CI setup credentials")
     def test_add_record(self):
         """
