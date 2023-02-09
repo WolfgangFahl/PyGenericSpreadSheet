@@ -124,7 +124,7 @@ class Wikidata:
         self.login=None
         self.wbi = None
 
-    def getItemByName(self,itemName:str,itemType:str,lang:str="en"):
+    def getItemByName(self,itemName:str,itemType:str,lang:str="en") -> typing.Optional[str]:
         '''
         get an item by Name
         ToDo: Needs to be reworked as always WDQS is used as endpoint even if a different one is defined
@@ -141,14 +141,14 @@ class Wikidata:
             SELECT ?item ?itemLabel
             WHERE {
               {
-                ?item wdt:P31 wd:%s.
+                ?item wdt:P31|wdt:P31/wdt:P279 wd:%s.
                 ?item rdfs:label ?itemLabel.
                 # short name
                 BIND(%s as ?shortNameLabel )
                 ?item wdt:P1813 ?shortNameLabel
                 FILTER(LANG(?itemLabel)= "%s" )
               } UNION {
-                ?item wdt:P31 wd:%s.
+                ?item wdt:P31|wdt:P31/wdt:P279 wd:%s.
                 BIND(%s as ?itemLabel )
                 ?item rdfs:label ?itemLabel.
               }
@@ -651,6 +651,50 @@ class Wikidata:
         """
         property_type = cls.get_datatype_of_property(property_id)
         return WdDatatype.get_by_wikibase(property_type)
+
+    def normalize_records(self, record: dict, prop_map: typing.List['PropertyMapping']):
+        """
+        Normalize given record by converting Qids to WikidataItem objects (lookup label) and find out Qid if label given
+        based on the given prop_map
+        """
+        itemid_props = [p for p in prop_map if p.propertyType is WdDatatype.itemid]
+        for p in itemid_props:
+            if p.column is None or p.column == "":
+                continue
+            value = record.get(p.column, None)
+            if value is None and p.value is not None:
+                value = p.value
+            if value is not None:
+                if self.is_wikidata_item_id(value):
+                    # lookup label
+                    qid = value
+                    label = self.get_item_label(qid)
+                else:
+                    # lookup label
+                    label = value
+                    qid = self.getItemByName(label, p.valueLookupType)
+                if qid is not None:
+                    record[p.column] = WikidataItem(qid, label)
+                else:
+                    record[p.column] = None
+        return record
+
+@dataclass
+class WikidataItem:
+    qid: str
+    label: str
+
+    def get_url(self):
+        return f"https://www.wikidata.org/wiki/{self.qid}"
+
+    def __eq__(self, other):
+        """
+        WikidataItems are equal if the qid is equal
+        """
+        return isinstance(other, WikidataItem) and self.qid == getattr(other, "qid", None)
+
+    def __str__(self):
+        return self.qid
 
 
 class WdDatatype(Enum):

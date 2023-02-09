@@ -5,7 +5,7 @@ from datetime import datetime
 from wikibaseintegrator.datatypes import URL, ExternalID, Item, Time, String, MonolingualText
 
 from tests.basetest import BaseTest
-from spreadsheet.wikidata import PropertyMapping, UrlReference, WdDatatype, Wikidata
+from spreadsheet.wikidata import PropertyMapping, UrlReference, WdDatatype, Wikidata, WikidataItem
 from spreadsheet.googlesheet import GoogleSheet
 from lodstorage.lod import LOD
 
@@ -33,15 +33,19 @@ class TestWikidata(BaseTest):
         '''
         debug = self.debug
         wd=Wikidata("https://www.wikidata.org",debug=True)
-        country=wd.getItemByName("USA","Q3624078")
-        if debug:
-            print(country)
-        self.assertEqual("Q30",country)
-        ecir=wd.getItemByName("ECIR","Q47258130")
-        if debug:
-            print(ecir)
-        self.assertEqual("Q5412436",ecir)
-        
+        test_params = [
+            ("USA","Q3624078", "Q30"),
+            ("ECIR","Q47258130", "Q5412436"),
+            ("Berlin", "Q515", "Q64")
+        ]
+        for test_param in test_params:
+            with self.subTest(test_param=test_param):
+                name, item_type, expected_qid = test_param
+                actual_qid = wd.getItemByName(name, item_type)
+                if debug:
+                    print(actual_qid)
+                self.assertEqual(expected_qid, actual_qid)
+
     def testAddItem(self):
         '''
         test the wikidata access
@@ -357,6 +361,23 @@ class TestWikidata(BaseTest):
                 self.assertIn("P813", json_str)
                 self.assertIn(url, json_str)
                 self.assertIn(date, json_str)
+
+    def test_normalize_records(self):
+        """
+        tests normalize_records
+        """
+        prop_maps = [
+            PropertyMapping(column="country", propertyType=WdDatatype.itemid, propertyName="country", propertyId="P17", valueLookupType="Q3624078"),
+            PropertyMapping(column="city", propertyType=WdDatatype.itemid, propertyName="location", propertyId="P276"),
+            PropertyMapping(column="location", propertyType=WdDatatype.itemid, propertyName="location", propertyId="P276"),
+            PropertyMapping(column="loc", propertyType=WdDatatype.itemid, propertyName="location", propertyId="P276"),
+            PropertyMapping(column=None, propertyType=WdDatatype.itemid, propertyName="location", propertyId="P276", value="Q5")
+        ]
+        record = {"country": "Germany", "city": "Q64", "location": None, "loc": ""}
+        exp_normalized_record = {"country": WikidataItem("Q183", "Germany"), "city": WikidataItem("Q64", "Berlin"), "location":None, "loc": None}
+        actual_normalized_record = self.wd.normalize_records(record, prop_maps)
+        self.assertDictEqual(exp_normalized_record, actual_normalized_record)
+
 
 
 class WikidataSandboxProperties:
