@@ -124,7 +124,7 @@ class Wikidata:
         self.login=None
         self.wbi = None
 
-    def getItemByName(self,itemName:str,itemType:str,lang:str="en") -> typing.Optional[str]:
+    def getItemByName(self, itemName: str, itemType: str, lang: str = "en") -> typing.Optional[str]:
         '''
         get an item by Name
         ToDo: Needs to be reworked as always WDQS is used as endpoint even if a different one is defined
@@ -664,20 +664,37 @@ class Wikidata:
             value = record.get(p.column, None)
             if value is None and p.value is not None:
                 value = p.value
-            if value is not None:
-                if self.is_wikidata_item_id(value):
-                    # lookup label
-                    qid = value
-                    label = self.get_item_label(qid)
-                else:
-                    # lookup label
-                    label = value
-                    qid = self.getItemByName(label, p.valueLookupType)
-                if qid is not None:
-                    record[p.column] = WikidataItem(qid, label)
-                else:
-                    record[p.column] = None
+            if isinstance(value, list):
+                wd_item = [self.get_wikidata_item(v, p.valueLookupType) for v in value]
+            else:
+                wd_item = self.get_wikidata_item(value, p.valueLookupType)
+            record[p.column] = wd_item
         return record
+
+    def get_wikidata_item(self, qid_or_label: str, item_type_qid: str = None) -> typing.Optional['WikidataItem']:
+        """
+        Get WikidataItem for given label or Qid
+
+        Args:
+            qid_or_label: label or Qid of a item
+
+        Returns:
+            WikidataItem
+        """
+        item = None
+        if qid_or_label is not None:
+            if self.is_wikidata_item_id(qid_or_label):
+                # lookup label
+                qid = qid_or_label
+                label = self.get_item_label(qid)
+            else:
+                # lookup label
+                label = qid_or_label
+                qid = self.getItemByName(label, item_type_qid)
+            if qid is not None:
+                item = WikidataItem(qid, label)
+        return item
+
 
 @dataclass
 class WikidataItem:

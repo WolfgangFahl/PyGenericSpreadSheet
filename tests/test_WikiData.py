@@ -362,6 +362,7 @@ class TestWikidata(BaseTest):
                 self.assertIn(url, json_str)
                 self.assertIn(date, json_str)
 
+    @unittest.skipIf(BaseTest.inPublicCI(), "querying wikidata endpoint")
     def test_normalize_records(self):
         """
         tests normalize_records
@@ -377,6 +378,21 @@ class TestWikidata(BaseTest):
         exp_normalized_record = {"country": WikidataItem("Q183", "Germany"), "city": WikidataItem("Q64", "Berlin"), "location":None, "loc": None}
         actual_normalized_record = self.wd.normalize_records(record, prop_maps)
         self.assertDictEqual(exp_normalized_record, actual_normalized_record)
+
+    @unittest.skipIf(BaseTest.inPublicCI(), "querying wikidata endpoint")
+    def test_get_wikidata_item(self):
+        """
+        tests get_wikidata_item
+        """
+        test_params = [
+            ("Germany", "Q3624078", WikidataItem("Q183", "Germany")),
+            ("Q183", None, WikidataItem("Q183", "Germany"))
+        ]
+        for test_param in test_params:
+            with self.subTest(test_param=test_param):
+                qid_or_label, item_type_qid, expected = test_param
+                actual = self.wd.get_wikidata_item(qid_or_label, item_type_qid)
+                self.assertEqual(expected, actual)
 
 
 
