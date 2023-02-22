@@ -3,6 +3,9 @@ Created on 2022-04-30
 
 @author: wf
 '''
+from typing import List, Optional
+
+from spreadsheet.wikidata import PropertyMapping, WdDatatype
 from tests.basetest import BaseTest
 
 from spreadsheet.wbquery import WikibaseQuery
@@ -45,13 +48,24 @@ class TestWikibaseQuery(BaseTest):
         clist=self.getSparqlResult(sparqlQuery, debug)
         return wbQuery,sparqlQuery,clist
             
-    def getSparqlResult(self,sparqlQuery,debug:bool=False):
-        rows=None
+    def getSparqlResult(self, sparqlQuery: str, debug: bool = False) -> Optional[List[dict]]:
+        """
+        Get Query result as LoD from given query
+
+        Args:
+            sparqlQuery: SPARQl query string
+            debug: If TRUE print query and result
+
+        Returns:
+            List[dict]: query result
+            None: if endpointUrl is not defined
+        """
+        rows = None
         if debug:
             print(sparqlQuery)
         if self.endpointUrl:
-            sparql=SPARQL(self.endpointUrl)
-            rows=sparql.queryAsListOfDicts(sparqlQuery)
+            sparql = SPARQL(self.endpointUrl)
+            rows = sparql.queryAsListOfDicts(sparqlQuery)
             if debug:
                 pprint.pprint(rows)
         return rows

@@ -767,6 +767,7 @@ class PropertyMapping:
     qualifierOf: str = None
     valueLookupType: typing.Any = None  # type (instance of/P31) of the property value → used to lookup the qid if property value if value is not already a qid
     value: typing.Any = None  # set this value for the property
+    varname: str = None
 
     @classmethod
     def from_records(cls, prop_mapping_records: typing.Dict[str, dict]) -> List['PropertyMapping']:
@@ -785,6 +786,22 @@ class PropertyMapping:
         return mappings
 
     @classmethod
+    def get_legacy_mapping(cls) -> dict:
+        """
+        Returns the Mapping from old prop map keys to the new once
+        """
+        return {
+            "Column": "column",
+            "PropertyName": "propertyName",
+            "PropertyId": "propertyId",
+            "Type": "propertyType",
+            "Qualifier": "qualifierOf",
+            "Lookup": "valueLookupType",
+            "Value": "value",
+            "PropVarname": "varname"
+        }
+
+    @classmethod
     def from_record(cls, record: dict) -> 'PropertyMapping':
         """
         initialize PropertyMapping from the given record
@@ -794,15 +811,7 @@ class PropertyMapping:
         Returns:
             PropertyMapping
         """
-        legacy_lookup = {
-            "Column": "column",
-            "PropertyName": "propertyName",
-            "PropertyId": "propertyId",
-            "Type": "propertyType",
-            "Qualifier": "qualifierOf",
-            "Lookup": "valueLookupType",
-            "Value": "value"
-        }
+        legacy_lookup = cls.get_legacy_mapping()
         record = record.copy()
         for i in range(len(record)):
             key = list(record.keys())[i]
@@ -827,9 +836,20 @@ class PropertyMapping:
                 propertyType=property_type,
                 qualifierOf=record.get("qualifierOf", None),
                 valueLookupType=record.get("valueLookupType", None),
-                value=record.get("value", None)
+                value=record.get("value", None),
+                varname=record.get("varname", None)
         )
         return mapping
+
+    def to_record(self) -> dict:
+        """
+        convert property mapping to its dict representation
+        """
+        key_map = self.get_legacy_mapping()
+        record = dict()
+        for old_key, new_key in key_map.items():
+            record[old_key] = getattr(self, new_key, None)
+        return record
 
     def is_qualifier(self) -> bool:
         """
@@ -839,16 +859,19 @@ class PropertyMapping:
         return is_qualifier
     
     @classmethod
-    def getDefaultItemPropertyMapping(cls)->"PropertyMapping":
+    def getDefaultItemPropertyMapping(cls) -> "PropertyMapping":
         """
         get the defaultItemPropertyMapping
         """
-        if not hasattr(cls,"defaultItemPropertyMapping"):
-            cls.defaultItemPropertyMapping=PropertyMapping(
+        if not hasattr(cls, "defaultItemPropertyMapping"):
+            item_prop_map = PropertyMapping(
                 column="item",
                 propertyName="item",
-                propertyId=None,
-                propertyType=WdDatatype.item)
+                propertyId="",
+                propertyType=WdDatatype.item,
+                varname="item"
+            )
+            cls.defaultItemPropertyMapping = item_prop_map
         return cls.defaultItemPropertyMapping
 
     def is_item_itself(self) -> bool:
@@ -888,7 +911,7 @@ class PropertyMapping:
         for pm in property_mappings:
             if pm.is_item_itself():
                 return pm
-        pm=cls.getDefaultItemPropertyMapping()
+        pm = cls.getDefaultItemPropertyMapping()
         return pm
 
 class UrlReference(Reference):
