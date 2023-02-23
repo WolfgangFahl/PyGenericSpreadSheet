@@ -136,12 +136,10 @@ SELECT ?item ?itemLabel ?itemDescription
   ?GND_ID ?GND_IDUrl
   ?DBLP_author_ID ?DBLP_author_IDUrl
 WHERE {
-  ?item rdfs:label ?itemLabel.
-  FILTER(LANG(?itemLabel) = "en")
-  OPTIONAL { 
-    ?item schema:description ?itemDescription.
-    FILTER(LANG(?itemDescription) = "en")
-  }
+    ?item rdfs:label ?itemLabel. FILTER(LANG(?itemLabel) = "en")
+    OPTIONAL {
+        ?item schema:description ?itemDescription. FILTER(LANG(?itemDescription) = "en")
+    }
 
   ?item wdt:P31 wd:Q5.
   OPTIONAL {
@@ -219,12 +217,10 @@ SELECT ?item ?itemLabel ?itemDescription
   ?WikiCFP_event_ID ?WikiCFP_event_IDUrl
   ?DBLP_event_ID ?DBLP_event_IDUrl
 WHERE {
-  ?item rdfs:label ?itemLabel.
-  FILTER(LANG(?itemLabel) = "en")
-  OPTIONAL { 
-    ?item schema:description ?itemDescription.
-    FILTER(LANG(?itemDescription) = "en")
-  }
+    ?item rdfs:label ?itemLabel. FILTER(LANG(?itemLabel) = "en")
+    OPTIONAL {
+        ?item schema:description ?itemDescription. FILTER(LANG(?itemDescription) = "en")
+    }
 
   ?item wdt:P31 wd:Q2020153.
   OPTIONAL {
