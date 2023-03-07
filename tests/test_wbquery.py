@@ -136,12 +136,10 @@ SELECT ?item ?itemLabel ?itemDescription
   ?GND_ID ?GND_IDUrl
   ?DBLP_author_ID ?DBLP_author_IDUrl
 WHERE {
-  ?item rdfs:label ?itemLabel.
-  FILTER(LANG(?itemLabel) = "en")
-  OPTIONAL { 
-    ?item schema:description ?itemDescription.
-    FILTER(LANG(?itemDescription) = "en")
-  }
+    ?item rdfs:label ?itemLabel. FILTER(LANG(?itemLabel) = "en")
+    OPTIONAL {
+        ?item schema:description ?itemDescription. FILTER(LANG(?itemDescription) = "en")
+    }
 
   ?item wdt:P31 wd:Q5.
   OPTIONAL {
@@ -219,12 +217,10 @@ SELECT ?item ?itemLabel ?itemDescription
   ?WikiCFP_event_ID ?WikiCFP_event_IDUrl
   ?DBLP_event_ID ?DBLP_event_IDUrl
 WHERE {
-  ?item rdfs:label ?itemLabel.
-  FILTER(LANG(?itemLabel) = "en")
-  OPTIONAL { 
-    ?item schema:description ?itemDescription.
-    FILTER(LANG(?itemDescription) = "en")
-  }
+    ?item rdfs:label ?itemLabel. FILTER(LANG(?itemLabel) = "en")
+    OPTIONAL {
+        ?item schema:description ?itemDescription. FILTER(LANG(?itemDescription) = "en")
+    }
 
   ?item wdt:P31 wd:Q2020153.
   OPTIONAL {
@@ -310,6 +306,7 @@ ORDER BY ?short_name""")
         ]
         debug=self.debug
         #debug=True
+        index=0
         for entityName,name,sheetName,url,expected_queries,pk,pk_label,expected in testcases:
             #debug=True
             queries=WikibaseQuery.ofGoogleSheet(url,sheetName=sheetName,debug=debug)
@@ -326,6 +323,8 @@ ORDER BY ?short_name""")
             #filterClause=eventQuery.inFilter(eventsByLabel.keys(),"short_name","en")
             filterClause=itemsQuery.getValuesClause(itemsByLabel.keys(),propVarname=pk,lang="en")
             sparql=itemsQuery.asSparql(filterClause=filterClause,orderClause=f"ORDER BY ?{pk}",pk=f"{pk_label}")
+            index+=1
             if debug:
+                print(f"Testcase {index}")
                 print(sparql)
             self.assertEqual(expected,sparql)
