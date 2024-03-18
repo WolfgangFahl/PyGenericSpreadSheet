@@ -1,20 +1,22 @@
-'''
+"""
 Created on 01.03.2024
 
 @author: wf
-'''
-from tests.basetest import BaseTest
-from spreadsheet.googlesheet import GoogleSheet
+"""
 from lodstorage.lod import LOD
+
+from spreadsheet.googlesheet import GoogleSheet
+from tests.basetest import BaseTest
+
 
 class TestWikidataWithGoogleSheet(BaseTest):
     """
     test wikidata handling via google sheets
     """
-    
+
     def setUp(self, debug=False, profile=True):
         BaseTest.setUp(self, debug=debug, profile=profile)
-     
+
     def testAddItem(self):
         """
         test the wikidata access
@@ -48,7 +50,7 @@ class TestWikidataWithGoogleSheet(BaseTest):
         # we didn't write so no item
         self.assertTrue(qid is None)
         pass
-    
+
     def testWikibaseQuery(self):
         """
         test wikibase Query handling
@@ -270,11 +272,11 @@ ORDER BY ?short_name""",
         ) in testcases:
             # debug=True
             gs = GoogleSheet(url)
-            queries=gs.toWikibaseQuery(url, sheetName, debug)
+            queries = gs.toWikibaseQuery(url, sheetName, debug)
             self.assertEqual(expected_queries, len(queries))
             if debug:
                 print(queries.keys())
-            
+
             gs.open([entityName])
             itemRows = gs.asListOfDicts(entityName)
             itemsByLabel, _dup = LOD.getLookup(itemRows, "label")

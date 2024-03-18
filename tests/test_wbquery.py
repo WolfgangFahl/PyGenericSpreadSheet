@@ -9,8 +9,8 @@ from typing import List, Optional
 from ez_wikidata.wbquery import WikibaseQuery
 from lodstorage.lod import LOD
 from lodstorage.sparql import SPARQL
-from spreadsheet.googlesheet import GoogleSheet
 
+from spreadsheet.googlesheet import GoogleSheet
 from tests.basetest import BaseTest
 
 
@@ -28,16 +28,14 @@ class TestWikibaseQuery(BaseTest):
         see https://github.com/WolfgangFahl/PyGenericSpreadSheet/issues/4
         """
         debug = self.debug
-        debug=True
+        debug = True
         url = "https://docs.google.com/spreadsheets/d/1AZ4tji1NDuPZ0gwsAxOADEQ9jz_67yRao2QcCaJQjmk"
-        google_sheet=GoogleSheet(url)
+        google_sheet = GoogleSheet(url)
         sheetName = "WorldPrayerDay"
-        #wb_query=google_sheet.toWikibaseQuery(url, sheetName, debug)
+        # wb_query=google_sheet.toWikibaseQuery(url, sheetName, debug)
         entityName = "WorldPrayerDay"
-        sparqlQuery=google_sheet.toSparql(url, 
-            sheetName, 
-            entityName, 
-            pkColumn="Theme", debug=debug
+        sparqlQuery = google_sheet.toSparql(
+            url, sheetName, entityName, pkColumn="Theme", debug=debug
         )
         if debug:
             print(sparqlQuery)
