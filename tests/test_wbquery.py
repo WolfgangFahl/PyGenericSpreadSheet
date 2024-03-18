@@ -6,7 +6,6 @@ Created on 2022-04-30
 import pprint
 from typing import List, Optional
 
-from ez_wikidata.wbquery import WikibaseQuery
 from lodstorage.lod import LOD
 from lodstorage.sparql import SPARQL
 
@@ -34,7 +33,7 @@ class TestWikibaseQuery(BaseTest):
         sheetName = "WorldPrayerDay"
         # wb_query=google_sheet.toWikibaseQuery(url, sheetName, debug)
         entityName = "WorldPrayerDay"
-        sparqlQuery = google_sheet.toSparql(
+        wbQuery, sparqlQuery = google_sheet.toSparql(
             url, sheetName, entityName, pkColumn="Theme", debug=debug
         )
         if debug:
@@ -48,7 +47,7 @@ class TestWikibaseQuery(BaseTest):
         url = "https://docs.google.com/spreadsheets/d/1ciz_hvLpPlSm_Y30HapuERBOyRBh-NC4UFxKOBU49Tw"
         sheetName = "Continent"
         entityName = sheetName
-        wbQuery, sparqlQuery = WikibaseQuery.sparqlOfGoogleSheet(
+        wbQuery, sparqlQuery = GoogleSheet.toSparql(
             url, sheetName, entityName, pkColumn=pkColumn, debug=debug
         )
         clist = self.getSparqlResult(sparqlQuery, debug)

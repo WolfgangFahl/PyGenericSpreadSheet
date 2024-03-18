@@ -4,7 +4,7 @@ Created on 01.03.2024
 @author: wf
 """
 from lodstorage.lod import LOD
-
+from ez_wikidata.wikidata import Wikidata
 from spreadsheet.googlesheet import GoogleSheet
 from tests.basetest import BaseTest
 
@@ -16,6 +16,7 @@ class TestWikidataWithGoogleSheet(BaseTest):
 
     def setUp(self, debug=False, profile=True):
         BaseTest.setUp(self, debug=debug, profile=profile)
+        self.wd=Wikidata()
 
     def testAddItem(self):
         """
@@ -24,7 +25,7 @@ class TestWikidataWithGoogleSheet(BaseTest):
         # http://learningwikibase.com/data-import/
         # https://github.com/SuLab/scheduled-bots/blob/main/scheduled_bots/wikipathways/bot.py
         debug = self.debug
-        # debug=True
+        debug=True
         url = "https://docs.google.com/spreadsheets/d/1AZ4tji1NDuPZ0gwsAxOADEQ9jz_67yRao2QcCaJQjmk"
         self.gs = GoogleSheet(url)
         spreadSheetNames = ["WorldPrayerDays", "Wikidata"]
@@ -43,12 +44,12 @@ class TestWikidataWithGoogleSheet(BaseTest):
         write = False
         # if write:
         #    wd.login()
-        qid, errors = self.wd.addDict(row, mapDict, write=write)
-        if len(errors) > 0:
-            print(errors)
-        self.assertEqual(0, len(errors))
+        wd_result = self.wd.addDict(row, mapDict, write=write)
+        if len(wd_result.errors) > 0:
+            print(wd_result.errors)
+        self.assertEqual(0, len(wd_result.errors))
         # we didn't write so no item
-        self.assertTrue(qid is None)
+        self.assertTrue(wd_result.qid is None)
         pass
 
     def testWikibaseQuery(self):
@@ -271,12 +272,11 @@ ORDER BY ?short_name""",
             expected,
         ) in testcases:
             # debug=True
-            gs = GoogleSheet(url)
-            queries = gs.toWikibaseQuery(url, sheetName, debug)
+            queries = GoogleSheet.toWikibaseQuery(url, sheetName, debug)
             self.assertEqual(expected_queries, len(queries))
             if debug:
                 print(queries.keys())
-
+            gs=GoogleSheet(url)
             gs.open([entityName])
             itemRows = gs.asListOfDicts(entityName)
             itemsByLabel, _dup = LOD.getLookup(itemRows, "label")

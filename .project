@@ -3,6 +3,7 @@
 	<name>PyGenericSpreadSheet</name>
 	<comment></comment>
 	<projects>
+		<project>py_ez_wikidata</project>
 		<project>pyLoDStorage</project>
 	</projects>
 	<buildSpec>
