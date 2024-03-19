@@ -3,12 +3,12 @@ Created on 2022-04-18
 
 @author: wf
 """
-from io import StringIO
-from typing import Dict
+import os
+from typing import Dict,List
 
-import pandas as pd
-import requests
+import gspread
 from ez_wikidata.wbquery import WikibaseQuery
+from google.oauth2.service_account import Credentials
 from lodstorage.lod import LOD
 
 
@@ -17,25 +17,73 @@ class GoogleSheet(object):
     GoogleSheet Handling
     """
 
-    def __init__(self, url):
+    def __init__(self, url: str, readonly: bool = True):
         """
-        Constructor
+        Initializes an instance of GoogleSheet.
+
+        Args:
+            url: URL to the Google Sheet.
+            readonly: If True, uses read-only scopes, otherwise uses full access scopes.
         """
         self.url = url
-        self.dfs = {}
+        self.sheet_dict = {}
+        self.scopes = ['https://www.googleapis.com/auth/spreadsheets.readonly'] \
+                      if readonly else \
+                      ['https://www.googleapis.com/auth/spreadsheets']
+        self.sheet_dict = {}
+        self.credentials = self.get_credentials()
+    
+    def get_credentials(self):
+        """
+        Check for Google API credentials in the home directory.
+        """
+        
+        cred_path = os.path.join(os.path.expanduser("~"), ".ose", "google-api-key.json")
+        credentials=None
+        if os.path.exists(cred_path):
+            credentials = Credentials.from_service_account_file(cred_path, scopes=self.scopes)
+        return credentials
+          
 
-    def open(self, sheetNames):
+    def open(self, sheet_names: list = None) -> dict:
         """
+        Opens the Google Sheet and loads the data from specified sheet names into a dictionary.
+
         Args:
-            sheets(list): a list of sheetnames
+            sheet_names: Optional list of sheet names to open. Opens all sheets if None.
+
+        Returns:
+            A dictionary with sheet names as keys and lists of dictionaries (rows) as values.
         """
-        self.sheetNames = sheetNames
-        for sheetName in sheetNames:
-            # csvurl=f"{self.url}/export?format=csv"
-            csvurl = f"{self.url}/gviz/tq?tqx=out:csv&sheet={sheetName}"
-            response = requests.get(csvurl)
-            csvStr = response.content.decode("utf-8")
-            self.dfs[sheetName] = pd.read_csv(StringIO(csvStr), keep_default_na=False)
+        credentials = self.get_credentials()
+        if not credentials:
+            raise Exception("Credentials not found.")
+
+        self.gc = gspread.authorize(credentials)
+        self.sh = self.gc.open_by_url(self.url)
+        # Retrieve all sheet names if none are provided
+        sheet_names = sheet_names or [sheet.title for sheet in self.sh.worksheets()]
+
+        for sheet_name in sheet_names:
+            worksheet = self.sh.worksheet(sheet_name)
+            self.sheet_dict[sheet_name] = worksheet.get_all_records()
+
+        return self.sheet_dict
+
+    def asListOfDicts(self, sheet_name: str)->List:
+        """
+        Converts a sheet to a list of dictionaries.
+
+        Args:
+            sheet_name: The name of the sheet to convert.
+
+        Returns:
+            A list of dictionaries, each representing a row in the sheet.
+        """
+        if not sheet_name in self.sheet_dict:
+            self.open[sheet_name]
+        lod = self.sheet_dict.get(sheet_name)
+        return lod
 
     def fixRows(self, lod: list):
         """
@@ -51,17 +99,6 @@ class GoogleSheet(object):
                     value = row[key]
                     row[trimmedKey] = value
                     del row[key]
-
-    def asListOfDicts(self, sheetName):
-        """
-        convert the given sheetName to a list of dicts
-
-        Args:
-            sheetName(str): the sheet to convert
-        """
-        lod = self.dfs[sheetName].to_dict("records")
-        self.fixRows(lod)
-        return lod
 
     @classmethod
     def toWikibaseQuery(

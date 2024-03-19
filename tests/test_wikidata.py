@@ -3,8 +3,9 @@ Created on 01.03.2024
 
 @author: wf
 """
-from lodstorage.lod import LOD
 from ez_wikidata.wikidata import Wikidata
+from lodstorage.lod import LOD
+
 from spreadsheet.googlesheet import GoogleSheet
 from tests.basetest import BaseTest
 
@@ -16,7 +17,7 @@ class TestWikidataWithGoogleSheet(BaseTest):
 
     def setUp(self, debug=False, profile=True):
         BaseTest.setUp(self, debug=debug, profile=profile)
-        self.wd=Wikidata()
+        self.wd = Wikidata()
 
     def testAddItem(self):
         """
@@ -25,7 +26,7 @@ class TestWikidataWithGoogleSheet(BaseTest):
         # http://learningwikibase.com/data-import/
         # https://github.com/SuLab/scheduled-bots/blob/main/scheduled_bots/wikipathways/bot.py
         debug = self.debug
-        debug=True
+        debug = True
         url = "https://docs.google.com/spreadsheets/d/1AZ4tji1NDuPZ0gwsAxOADEQ9jz_67yRao2QcCaJQjmk"
         self.gs = GoogleSheet(url)
         spreadSheetNames = ["WorldPrayerDays", "Wikidata"]
@@ -276,7 +277,7 @@ ORDER BY ?short_name""",
             self.assertEqual(expected_queries, len(queries))
             if debug:
                 print(queries.keys())
-            gs=GoogleSheet(url)
+            gs = GoogleSheet(url)
             gs.open([entityName])
             itemRows = gs.asListOfDicts(entityName)
             itemsByLabel, _dup = LOD.getLookup(itemRows, "label")
