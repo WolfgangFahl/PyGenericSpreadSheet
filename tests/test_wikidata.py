@@ -26,13 +26,13 @@ class TestWikidataWithGoogleSheet(BaseTest):
         # http://learningwikibase.com/data-import/
         # https://github.com/SuLab/scheduled-bots/blob/main/scheduled_bots/wikipathways/bot.py
         debug = self.debug
-        debug = True
+        #debug = True
         url = "https://docs.google.com/spreadsheets/d/1AZ4tji1NDuPZ0gwsAxOADEQ9jz_67yRao2QcCaJQjmk"
         self.gs = GoogleSheet(url)
-        spreadSheetNames = ["WorldPrayerDay", "Wikidata"]
+        spreadSheetNames = ["WorldPrayerDay", "WikidataMapping"]
         self.gs.open(spreadSheetNames)
         rows = self.gs.asListOfDicts("WorldPrayerDay")
-        mapRows = self.gs.asListOfDicts("Wikidata")
+        mapRows = self.gs.asListOfDicts("WikidataMapping")
         mapDict, _dup = LOD.getLookup(mapRows, "PropertyId", withDuplicates=False)
         # 1935
         row = rows[7]
