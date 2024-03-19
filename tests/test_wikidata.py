@@ -29,9 +29,9 @@ class TestWikidataWithGoogleSheet(BaseTest):
         debug = True
         url = "https://docs.google.com/spreadsheets/d/1AZ4tji1NDuPZ0gwsAxOADEQ9jz_67yRao2QcCaJQjmk"
         self.gs = GoogleSheet(url)
-        spreadSheetNames = ["WorldPrayerDays", "Wikidata"]
+        spreadSheetNames = ["WorldPrayerDay", "Wikidata"]
         self.gs.open(spreadSheetNames)
-        rows = self.gs.asListOfDicts("WorldPrayerDays")
+        rows = self.gs.asListOfDicts("WorldPrayerDay")
         mapRows = self.gs.asListOfDicts("Wikidata")
         mapDict, _dup = LOD.getLookup(mapRows, "PropertyId", withDuplicates=False)
         # 1935
