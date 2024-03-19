@@ -3,7 +3,10 @@ Created on 2022-04-18
 
 @author: wf
 """
+
 import json
+import time
+import random
 import os
 from typing import Dict,List
 
@@ -18,7 +21,7 @@ class GoogleSheet(object):
     GoogleSheet Handling
     """
 
-    def __init__(self, url: str, readonly: bool = True):
+    def __init__(self, url: str, readonly: bool = True, max_retries:int=5, max_wait:float=60.0):
         """
         Initializes an instance of GoogleSheet.
 
@@ -32,7 +35,41 @@ class GoogleSheet(object):
                       if readonly else \
                       ['https://www.googleapis.com/auth/spreadsheets']
         self.sheet_dict = {}
+        self.max_retries=max_retries
+        self.max_wait=max_wait
         self.credentials = self.get_credentials()
+        
+    def safe_api_call(self, func, *args, **kwargs):
+        """
+        Safe wrapper for API calls with exponential backoff.
+
+        Args:
+            func: The API function to call.
+            *args: Arguments for the API function.
+            **kwargs: Keyword arguments for the API function.
+
+        Returns:
+            The result of the API function call.
+        """
+        base_sleep = 1  # Initial sleep time in seconds
+        total_sleep = 0  # Total time slept
+
+        for attempt in range(self.max_retries):
+            try:
+                return func(*args, **kwargs)
+            except gspread.exceptions.APIError as e:
+                if e.response.status_code != 429:
+                    raise  # Reraise if not a quota limit error
+
+                # Calculate sleep time with exponential backoff
+                sleep_time = min(base_sleep * (2 ** attempt) + random.random(), self.max_wait - total_sleep)
+                if total_sleep + sleep_time > self.max_wait:
+                    raise Exception(f"Exceeded maximum wait time of {self.max_wait} seconds for Google API calls.") from e
+
+                print(f"Quota exceeded, retrying in {sleep_time:.2f} seconds.")
+                time.sleep(sleep_time)
+                total_sleep += sleep_time
+        raise Exception("Maximum retries reached without success.")
     
     def get_credentials(self):
         """
@@ -66,14 +103,15 @@ class GoogleSheet(object):
             raise Exception("Credentials not found.")
 
         self.gc = gspread.authorize(credentials)
-        self.sh = self.gc.open_by_url(self.url)
+        self.sh = self.safe_api_call(self.gc.open_by_url, self.url)
         # Retrieve all sheet names if none are provided
         sheet_names = sheet_names or [sheet.title for sheet in self.sh.worksheets()]
 
         for sheet_name in sheet_names:
             worksheet = self.sh.worksheet(sheet_name)
-            self.sheet_dict[sheet_name] = worksheet.get_all_records()
-
+            records = self.safe_api_call(worksheet.get_all_records)
+            self.sheet_dict[sheet_name] = records
+      
         return self.sheet_dict
 
     def asListOfDicts(self, sheet_name: str)->List:
