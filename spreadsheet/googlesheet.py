@@ -3,6 +3,7 @@ Created on 2022-04-18
 
 @author: wf
 """
+import json
 import os
 from typing import Dict,List
 
@@ -35,13 +36,18 @@ class GoogleSheet(object):
     
     def get_credentials(self):
         """
-        Check for Google API credentials in the home directory.
+        Check for Google API credentials in the home directory or
+        the GOOGLE_API_KEY environment variable
         """
-        
-        cred_path = os.path.join(os.path.expanduser("~"), ".ose", "google-api-key.json")
+        google_api_key_json=os.getenv("GOOGLE_API_KEY")
         credentials=None
-        if os.path.exists(cred_path):
-            credentials = Credentials.from_service_account_file(cred_path, scopes=self.scopes)
+        if google_api_key_json:
+            creds_dict=json.loads(google_api_key_json)
+            credentials=Credentials.from_service_account_info(creds_dict, scopes=self.scopes)
+        else:
+            cred_path = os.path.join(os.path.expanduser("~"), ".ose", "google-api-key.json")
+            if os.path.exists(cred_path):
+                credentials = Credentials.from_service_account_file(cred_path, scopes=self.scopes)
         return credentials
           
 
