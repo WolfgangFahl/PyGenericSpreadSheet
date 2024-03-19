@@ -13,6 +13,6 @@ class Version(object):
 
     version = spreadsheet.__version__
     date = "2022-04-21"
-    updated = "2024-03-18"
+    updated = "2024-03-19"
     name = "pyGenericSpreadSheet"
     description = "python API providing generic Access to specific Spreadsheet backends"
