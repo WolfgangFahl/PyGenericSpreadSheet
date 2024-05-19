@@ -159,7 +159,8 @@ class GoogleSheet(object):
         gs = GoogleSheet(url)
         gs.open([sheetName])
         entityMapRows = gs.asListOfDicts(sheetName)
-        return WikibaseQuery.ofMapRows(entityMapRows, debug=debug)
+        queries=WikibaseQuery.ofMapRows(entityMapRows, debug=debug)
+        return queries
 
     @classmethod
     def toSparql(

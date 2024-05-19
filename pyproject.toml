@@ -18,7 +18,7 @@ readme = "README.md"
 license= "Apache-2.0"
 dependencies = [
   # https://pypi.org/project/pylodstorage/
-  "pylodstorage>=0.9.2",
+  "pylodstorage>=0.11.5",
   # https://pypi.org/project/odfpy/
   "odfpy>=1.4.1",
   # https://pypi.org/project/XlsxWriter/
@@ -30,7 +30,7 @@ dependencies = [
   # https://pypi.org/project/pandas/
   "pandas>=2.2.1",
   #  https://pypi.org/project/py-ez-wikidata/
-  "py-ez_wikidata>=0.2.1",
+  "py-ez_wikidata>=0.2.2",
   # https://pypi.org/project/python-dateutil/
   "python-dateutil>=2.8.2"
 ]

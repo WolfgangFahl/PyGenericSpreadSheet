@@ -2,7 +2,7 @@ import io
 from datetime import date, datetime
 from tempfile import TemporaryDirectory
 
-from lodstorage.csv import CSV
+from lodstorage.lod_csv import CSV
 
 from spreadsheet.spreadsheet import (
     CSVSpreadSheet,

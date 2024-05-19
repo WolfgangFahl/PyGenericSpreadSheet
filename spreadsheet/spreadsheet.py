@@ -8,7 +8,7 @@ from zipfile import ZipFile
 
 import dateutil.parser as dateparser
 import pandas as pd
-from lodstorage.csv import CSV
+from lodstorage.lod_csv import CSV
 from pandas import NaT, Timestamp
 
 
