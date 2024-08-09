@@ -1,5 +1,6 @@
 # PyGenericSpreadSheet
 Generic Spreadsheet Editing API
+
 [![pypi](https://img.shields.io/pypi/pyversions/PyGenericSpreadSheet)](https://pypi.org/project/PyGenericSpreadSheet/)
 [![Github Actions Build](https://github.com/WolfgangFahl/PyGenericSpreadSheet/actions/workflows/build.yml/badge.svg)](https://github.com/WolfgangFahl/PyGenericSpreadSheet/actions/workflows/build.yml)
 [![PyPI Status](https://img.shields.io/pypi/v/PyGenericSpreadSheet.svg)](https://pypi.python.org/pypi/PyGenericSpreadSheet/)
