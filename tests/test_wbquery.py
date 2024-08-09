@@ -27,7 +27,7 @@ class TestWikibaseQuery(BaseTest):
         see https://github.com/WolfgangFahl/PyGenericSpreadSheet/issues/4
         """
         debug = self.debug
-        debug = True
+        #debug = True
         url = "https://docs.google.com/spreadsheets/d/1AZ4tji1NDuPZ0gwsAxOADEQ9jz_67yRao2QcCaJQjmk"
         google_sheet = GoogleSheet(url)
         sheetName = "WorldPrayerDay"
