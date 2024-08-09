@@ -70,4 +70,4 @@ test = [
 only-include = ["spreadsheet"]
 
 [tool.hatch.build.targets.wheel.sources]
-"thunderbird" = "spreadsheet"
+"spreadsheet" = "spreadsheet"
