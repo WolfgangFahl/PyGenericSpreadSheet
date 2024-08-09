@@ -43,7 +43,7 @@ class TestWikibaseQuery(BaseTest):
             self.assertTrue(len(wpdlist) > 90)
         self.assertTrue("God\\'s Wisdom" in sparqlQuery)
 
-    def getContinentQuery(self, pkColumn: "item", debug: bool = False):
+    def getContinentQuery(self, pkColumn: str="item", debug: bool = False):
         url = "https://docs.google.com/spreadsheets/d/1ciz_hvLpPlSm_Y30HapuERBOyRBh-NC4UFxKOBU49Tw"
         sheetName = "Continent"
         entityName = sheetName

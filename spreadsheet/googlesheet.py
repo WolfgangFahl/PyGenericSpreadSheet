@@ -177,13 +177,13 @@ class GoogleSheet(object):
         get a sparql query for the given google sheet
 
         Args:
-            url(str): the url of the sheet
-            sheetName(str): the name of the sheet with the description
-            entityName(str): the name of the entity as defined in the Wikidata mapping
-            pkColumn(str): the column to use as a "primary key"
-            mappingSheetName(str): the name of the sheet with the Wikidata mappings
-            lang(str): the language to use (if any)
-            debug(bool): if True switch on debugging
+            url (str): the url of the sheet
+            sheetName (str): the name of the sheet with the description
+            entityName (str): the name of the entity as defined in the Wikidata mapping
+            pkColumn (str): the column to use as a "primary key"
+            mappingSheetName (str): the name of the sheet with the Wikidata mappings
+            lang (str): the language to use (if any)
+            debug (bool): if True switch on debugging
 
         Returns:
             WikibaseQuery
