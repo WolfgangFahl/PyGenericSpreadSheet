@@ -1409,8 +1409,8 @@
 <span class="sd">        Initializes an instance of GoogleSheet.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            url: URL to the Google Sheet.</span>
-<span class="sd">            readonly: If True, uses read-only scopes, otherwise uses full access scopes.</span>
+<span class="sd">            url (str): URL to the Google Sheet.</span>
+<span class="sd">            readonly (bool): If True, uses read-only scopes, otherwise uses full access scopes.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">url</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sheet_dict</span> <span class="o">=</span> <span class="p">{}</span>
@@ -1502,7 +1502,7 @@
 <span class="sd">        Converts a sheet to a list of dictionaries.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            sheet_name: The name of the sheet to convert.</span>
+<span class="sd">            sheet_name (str): The name of the sheet to convert.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            A list of dictionaries, each representing a row in the sheet.</span>
@@ -1560,13 +1560,13 @@
 <span class="sd">        get a sparql query for the given google sheet</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            url(str): the url of the sheet</span>
-<span class="sd">            sheetName(str): the name of the sheet with the description</span>
-<span class="sd">            entityName(str): the name of the entity as defined in the Wikidata mapping</span>
-<span class="sd">            pkColumn(str): the column to use as a &quot;primary key&quot;</span>
-<span class="sd">            mappingSheetName(str): the name of the sheet with the Wikidata mappings</span>
-<span class="sd">            lang(str): the language to use (if any)</span>
-<span class="sd">            debug(bool): if True switch on debugging</span>
+<span class="sd">            url (str): the url of the sheet</span>
+<span class="sd">            sheetName (str): the name of the sheet with the description</span>
+<span class="sd">            entityName (str): the name of the entity as defined in the Wikidata mapping</span>
+<span class="sd">            pkColumn (str): the column to use as a &quot;primary key&quot;</span>
+<span class="sd">            mappingSheetName (str): the name of the sheet with the Wikidata mappings</span>
+<span class="sd">            lang (str): the language to use (if any)</span>
+<span class="sd">            debug (bool): if True switch on debugging</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            WikibaseQuery</span>
@@ -1683,8 +1683,8 @@
 <span class="sd">    Initializes an instance of GoogleSheet.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        url: URL to the Google Sheet.</span>
-<span class="sd">        readonly: If True, uses read-only scopes, otherwise uses full access scopes.</span>
+<span class="sd">        url (str): URL to the Google Sheet.</span>
+<span class="sd">        readonly (bool): If True, uses read-only scopes, otherwise uses full access scopes.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">url</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">sheet_dict</span> <span class="o">=</span> <span class="p">{}</span>
@@ -1786,7 +1786,7 @@
 <span class="sd">    Converts a sheet to a list of dictionaries.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        sheet_name: The name of the sheet to convert.</span>
+<span class="sd">        sheet_name (str): The name of the sheet to convert.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        A list of dictionaries, each representing a row in the sheet.</span>
@@ -2211,8 +2211,9 @@ the GOOGLE_API_KEY environment variable</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>url(str)</code></td>
+            <td><code>url</code></td>
             <td>
+                  <code>str</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2224,8 +2225,9 @@ the GOOGLE_API_KEY environment variable</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>sheetName(str)</code></td>
+            <td><code>sheetName</code></td>
             <td>
+                  <code>str</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2237,8 +2239,9 @@ the GOOGLE_API_KEY environment variable</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>entityName(str)</code></td>
+            <td><code>entityName</code></td>
             <td>
+                  <code>str</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2250,8 +2253,9 @@ the GOOGLE_API_KEY environment variable</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>pkColumn(str)</code></td>
+            <td><code>pkColumn</code></td>
             <td>
+                  <code>str</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2263,8 +2267,9 @@ the GOOGLE_API_KEY environment variable</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>mappingSheetName(str)</code></td>
+            <td><code>mappingSheetName</code></td>
             <td>
+                  <code>str</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2272,12 +2277,13 @@ the GOOGLE_API_KEY environment variable</p>
               </div>
             </td>
             <td>
-                <em>required</em>
+                  <code>&#39;WikidataMapping&#39;</code>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>lang(str)</code></td>
+            <td><code>lang</code></td>
             <td>
+                  <code>str</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2285,12 +2291,13 @@ the GOOGLE_API_KEY environment variable</p>
               </div>
             </td>
             <td>
-                <em>required</em>
+                  <code>&#39;en&#39;</code>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>debug(bool)</code></td>
+            <td><code>debug</code></td>
             <td>
+                  <code>bool</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2298,7 +2305,7 @@ the GOOGLE_API_KEY environment variable</p>
               </div>
             </td>
             <td>
-                <em>required</em>
+                  <code>False</code>
             </td>
           </tr>
       </tbody>
@@ -2387,13 +2394,13 @@ the GOOGLE_API_KEY environment variable</p>
 <span class="sd">    get a sparql query for the given google sheet</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        url(str): the url of the sheet</span>
-<span class="sd">        sheetName(str): the name of the sheet with the description</span>
-<span class="sd">        entityName(str): the name of the entity as defined in the Wikidata mapping</span>
-<span class="sd">        pkColumn(str): the column to use as a &quot;primary key&quot;</span>
-<span class="sd">        mappingSheetName(str): the name of the sheet with the Wikidata mappings</span>
-<span class="sd">        lang(str): the language to use (if any)</span>
-<span class="sd">        debug(bool): if True switch on debugging</span>
+<span class="sd">        url (str): the url of the sheet</span>
+<span class="sd">        sheetName (str): the name of the sheet with the description</span>
+<span class="sd">        entityName (str): the name of the entity as defined in the Wikidata mapping</span>
+<span class="sd">        pkColumn (str): the column to use as a &quot;primary key&quot;</span>
+<span class="sd">        mappingSheetName (str): the name of the sheet with the Wikidata mappings</span>
+<span class="sd">        lang (str): the language to use (if any)</span>
+<span class="sd">        debug (bool): if True switch on debugging</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        WikibaseQuery</span>
