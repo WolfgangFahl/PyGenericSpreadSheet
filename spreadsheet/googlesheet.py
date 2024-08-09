@@ -26,8 +26,8 @@ class GoogleSheet(object):
         Initializes an instance of GoogleSheet.
 
         Args:
-            url: URL to the Google Sheet.
-            readonly: If True, uses read-only scopes, otherwise uses full access scopes.
+            url (str): URL to the Google Sheet.
+            readonly (bool): If True, uses read-only scopes, otherwise uses full access scopes.
         """
         self.url = url
         self.sheet_dict = {}
@@ -38,7 +38,7 @@ class GoogleSheet(object):
         self.max_retries=max_retries
         self.max_wait=max_wait
         self.credentials = self.get_credentials()
-        
+
     def safe_api_call(self, func, *args, **kwargs):
         """
         Safe wrapper for API calls with exponential backoff.
@@ -70,7 +70,7 @@ class GoogleSheet(object):
                 time.sleep(sleep_time)
                 total_sleep += sleep_time
         raise Exception("Maximum retries reached without success.")
-    
+
     def get_credentials(self):
         """
         Check for Google API credentials in the home directory or
@@ -86,7 +86,7 @@ class GoogleSheet(object):
             if os.path.exists(cred_path):
                 credentials = Credentials.from_service_account_file(cred_path, scopes=self.scopes)
         return credentials
-          
+
 
     def open(self, sheet_names: list = None) -> dict:
         """
@@ -111,7 +111,7 @@ class GoogleSheet(object):
             worksheet = self.sh.worksheet(sheet_name)
             records = self.safe_api_call(worksheet.get_all_records)
             self.sheet_dict[sheet_name] = records
-      
+
         return self.sheet_dict
 
     def asListOfDicts(self, sheet_name: str)->List:
@@ -119,7 +119,7 @@ class GoogleSheet(object):
         Converts a sheet to a list of dictionaries.
 
         Args:
-            sheet_name: The name of the sheet to convert.
+            sheet_name (str): The name of the sheet to convert.
 
         Returns:
             A list of dictionaries, each representing a row in the sheet.
