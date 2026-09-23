@@ -134,7 +134,7 @@ class TestSpreadSheet(BaseTest):
         """
         tests tha loading of a given csv file
         """
-        csvStr = CSV.toCSV(self.testLoD)
+        csvStr = CSV.get_instance().toCSV(self.testLoD)
         buffer = io.BytesIO(initial_bytes=csvStr.encode())
         buffer.name = "Persons.csv"
         spreadsheet = CSVSpreadSheet("PersonTest")

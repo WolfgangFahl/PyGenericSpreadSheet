@@ -372,7 +372,7 @@ class CSVSpreadSheet(SpreadSheet):
         buffer.name = self.filename
         with ZipFile(buffer, mode="w") as documentZip:
             for tableName, table in self.tables.items():
-                csv = CSV.toCSV(table)
+                csv = CSV.get_instance().toCSV(table)
                 documentZip.writestr(tableName + self.TABLE_TYPE, csv)
         buffer.seek(0)
         return buffer
@@ -392,12 +392,12 @@ class CSVSpreadSheet(SpreadSheet):
                 archivedFiles = documentZip.namelist()
                 for archivedFile in archivedFiles:
                     with documentZip.open(archivedFile) as csvFile:
-                        lod = CSV.fromCSV(csvFile.read().decode())
+                        lod = CSV.get_instance().fromCSV(csvFile.read().decode())
                         tableName = archivedFile[: -len(self.TABLE_TYPE)]
                         tables[tableName] = lod
         elif fileName.endswith(self.TABLE_TYPE):
             # single csv file load as sheet with one table
-            lod = CSV.fromCSV(file.read().decode())
+            lod = CSV.get_instance().fromCSV(file.read().decode())
             tableName = fileName[: -len(self.TABLE_TYPE)]
             tables[tableName] = lod
         return tables
@@ -462,11 +462,11 @@ class ExcelDocument(SpreadSheet):
             # NaT handling issue due to a bug in pandas https://github.com/pandas-dev/pandas/issues/29024
             lod = [
                 {
-                    k: v.to_pydatetime()
-                    if isinstance(v, Timestamp)
-                    else None
-                    if isinstance(v, type(NaT))
-                    else v
+                    k: (
+                        v.to_pydatetime()
+                        if isinstance(v, Timestamp)
+                        else None if isinstance(v, type(NaT)) else v
+                    )
                     for k, v in d.items()
                 }
                 for d in lod
